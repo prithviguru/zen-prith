@@ -10,8 +10,9 @@ One breath at a time.
 - **Session ratings** — each session is rated Good, Okay, or Not great. The
   calendar encodes quality by how much sage fills the circle: solid = good,
   soft fill = okay, outline = not great. Reopen a day to change or remove it.
-- **Streak tracking** — your current consecutive-day streak (it survives until
-  the end of today, so a missed morning doesn't break it prematurely).
+- **Weekly goal** — the dashboard leads with sessions this week against your
+  goal (e.g. 3/5) with a progress dot per session; the card glows when the
+  goal is met. Tap the card to set the goal (1–7 sessions per week).
 - **Monthly & all-time counts** at a glance.
 - **Local & private** — everything is stored in your browser's `localStorage`.
   No accounts, no servers, no tracking.
