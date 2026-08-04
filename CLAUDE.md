@@ -19,6 +19,12 @@ https://prithviguru.github.io/zen-prith/.
 - **Verify in a real browser** (Playwright + the pre-installed Chromium)
   before shipping, rather than reasoning about the DOM.
 
+## Backlog
+
+Parked feature ideas live in `BACKLOG.md`, with the research behind each one
+so it doesn't get redone. Add to it when an idea comes up mid-conversation;
+move an item out when it ships.
+
 ## Workflow
 
 Develop on `claude/meditation-tracking-app-*`, then open a PR into `main` and
