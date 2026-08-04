@@ -457,21 +457,30 @@
   .dur-plus { min-width: 42px; font-size: 15px; line-height: 1; }
 
   .dur-input {
-    width: 88px;
+    width: 82px;
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 999px;
     padding: 8px 10px;
     color: var(--text);
     font-family: inherit;
-    font-size: 16px; /* 16px keeps iOS from zooming on focus */
+    font-size: 12px; /* matches the chips */
+    letter-spacing: 0.03em;
     text-align: center;
     outline: none;
     -moz-appearance: textfield;
     transition: border-color 0.2s, color 0.2s, background 0.2s;
   }
-  .dur-input::placeholder { color: var(--text-faint); }
-  .dur-input:focus { border-color: rgba(163, 177, 138, 0.5); }
+  .dur-input::placeholder {
+    color: var(--text-faint);
+    font-style: italic;
+  }
+  /* iOS zooms the page when a focused field is under 16px, so grow it for
+     the moment it's being typed into — at rest it sits level with the chips. */
+  .dur-input:focus {
+    border-color: rgba(163, 177, 138, 0.5);
+    font-size: 16px;
+  }
   .dur-input.selected {
     border-color: rgba(163, 177, 138, 0.55);
     background: rgba(163, 177, 138, 0.1);
