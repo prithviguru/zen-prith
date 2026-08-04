@@ -13,7 +13,8 @@ One breath at a time.
 - **Weekly goal** — the dashboard leads with sessions this week against your
   goal (e.g. 3/5) with a progress dot per session; the card glows when the
   goal is met. Tap the card to set the goal (1–7 sessions per week).
-- **Monthly & all-time counts** at a glance.
+- **Monthly counts** at a glance — total sessions and Good-rated days for
+  the month being viewed.
 - **Local & private** — everything is stored in your browser's `localStorage`.
   No accounts, no servers, no tracking.
 
