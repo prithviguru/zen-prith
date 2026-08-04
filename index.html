@@ -224,16 +224,31 @@
     background: var(--text-dim);
   }
 
-  .day.done {
+  /* Rating visual language: how much sage fills the circle = how the sit went.
+     good = solid, okay = soft fill, rough = outline only. */
+  .day.done { font-weight: 500; }
+
+  .day.r-good {
+    background: var(--accent);
+    color: #11150d;
+    box-shadow: 0 0 12px rgba(163, 177, 138, 0.3);
+  }
+  .day.r-good:hover { background: #b3c09c; }
+
+  .day.r-okay {
     background: var(--accent-soft);
     color: var(--accent);
-    font-weight: 500;
     box-shadow: inset 0 0 0 1px rgba(163, 177, 138, 0.35);
   }
+  .day.r-okay:hover { background: rgba(163, 177, 138, 0.22); }
 
-  .day.done:hover { background: rgba(163, 177, 138, 0.22); }
+  .day.r-rough {
+    color: rgba(163, 177, 138, 0.8);
+    box-shadow: inset 0 0 0 1.5px rgba(163, 177, 138, 0.4);
+  }
+  .day.r-rough:hover { background: var(--surface-2); }
 
-  .day.done.today::after { background: var(--accent); }
+  .day.done.today::after { background: currentColor; }
 
   .day.pop { animation: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
 
@@ -243,14 +258,122 @@
     100% { transform: scale(1); }
   }
 
-  /* ---------- footer ---------- */
-  footer {
+  /* ---------- rating sheet ---------- */
+  .dot-sw {
+    display: block;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+  }
+  .sw-good { background: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+  .sw-okay { background: var(--accent-soft); box-shadow: inset 0 0 0 1.5px rgba(163, 177, 138, 0.45); }
+  .sw-rough { background: transparent; box-shadow: inset 0 0 0 1.5px rgba(163, 177, 138, 0.45); }
+
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(4, 6, 7, 0.55);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+    z-index: 10;
+  }
+  .backdrop.open { opacity: 1; pointer-events: auto; }
+
+  .sheet {
+    position: fixed;
+    left: 50%;
+    bottom: 0;
+    transform: translate(-50%, 105%);
+    width: 100%;
+    max-width: 420px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-bottom: none;
+    border-radius: 24px 24px 0 0;
+    padding: 22px 20px calc(18px + env(safe-area-inset-bottom));
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0.35, 1);
+    z-index: 11;
+  }
+  .sheet.open { transform: translate(-50%, 0); }
+
+  .sheet-date {
     text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .sheet-title {
+    text-align: center;
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 24px;
+    font-weight: 500;
+    margin: 4px 0 18px;
+  }
+
+  .opts { display: flex; gap: 10px; }
+
+  .opt {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 16px 8px 13px;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s, background 0.2s, transform 0.15s;
+  }
+  .opt:hover { color: var(--text); border-color: rgba(255, 255, 255, 0.16); }
+  .opt:active { transform: scale(0.96); }
+  .opt.selected {
+    border-color: rgba(163, 177, 138, 0.6);
+    color: var(--text);
+    background: rgba(163, 177, 138, 0.07);
+  }
+
+  .sheet-remove {
+    display: block;
+    width: 100%;
+    margin-top: 12px;
+    padding: 10px;
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .sheet-remove:hover { color: #c99a8f; }
+
+  /* ---------- footer legend ---------- */
+  footer {
+    display: flex;
+    justify-content: center;
+    gap: 22px;
     font-size: 11px;
     font-weight: 300;
     letter-spacing: 0.06em;
     color: var(--text-faint);
   }
+
+  footer span { display: inline-flex; align-items: center; gap: 7px; }
+  footer .dot-sw { width: 12px; height: 12px; }
+  footer .sw-good { box-shadow: none; }
 
   @media (max-width: 380px) {
     h1 { font-size: 30px; }
@@ -281,30 +404,62 @@
       <div class="grid" id="grid"></div>
     </section>
 
-    <footer>Tap a day to mark your meditation</footer>
+    <footer aria-label="Rating legend">
+      <span><i class="dot-sw sw-good"></i>Good</span>
+      <span><i class="dot-sw sw-okay"></i>Okay</span>
+      <span><i class="dot-sw sw-rough"></i>Not great</span>
+    </footer>
   </main>
+
+  <div class="backdrop" id="backdrop"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <p class="sheet-date" id="sheet-date"></p>
+    <h2 class="sheet-title" id="sheet-title">How was your session today?</h2>
+    <div class="opts">
+      <button class="opt" data-rating="good"><i class="dot-sw sw-good"></i>Good</button>
+      <button class="opt" data-rating="okay"><i class="dot-sw sw-okay"></i>Okay</button>
+      <button class="opt" data-rating="rough"><i class="dot-sw sw-rough"></i>Not great</button>
+    </div>
+    <button class="sheet-remove" id="sheet-remove">Remove this day</button>
+  </div>
 
 <script>
 (() => {
-  const STORAGE_KEY = "zen-meditation-days";
+  const STORAGE_KEY = "zen-meditation-log";
+  const LEGACY_KEY = "zen-meditation-days";
   const MONTHS = ["January","February","March","April","May","June",
                   "July","August","September","October","November","December"];
   const DOWS = ["S","M","T","W","T","F","S"];
+  const LABELS = { good: "good", okay: "okay", rough: "not great" };
 
   const grid = document.getElementById("grid");
   const title = document.getElementById("cal-title");
 
-  let days = load();
+  // log maps ISO date -> rating: "good" | "okay" | "rough"
+  let log = load();
   let view = new Date();
   view.setDate(1);
+  let sheetKey = null;   // date currently open in the rating sheet
+  let justRated = null;  // date to pop-animate on next render
 
   function load() {
-    try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY)) || []); }
-    catch { return new Set(); }
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw) || {};
+      // Migrate v1 data: unrated marked days become "okay".
+      const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY));
+      if (Array.isArray(legacy) && legacy.length) {
+        const migrated = {};
+        for (const d of legacy) migrated[d] = "okay";
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+        return migrated;
+      }
+    } catch {}
+    return {};
   }
 
   function save() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([...days]));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(log));
   }
 
   function key(y, m, d) {
@@ -319,9 +474,9 @@
   function streak() {
     const t = new Date();
     // A streak is alive if today OR yesterday is marked (today isn't over yet).
-    if (!days.has(todayKey())) t.setDate(t.getDate() - 1);
+    if (!log[todayKey()]) t.setDate(t.getDate() - 1);
     let n = 0;
-    while (days.has(key(t.getFullYear(), t.getMonth(), t.getDate()))) {
+    while (log[key(t.getFullYear(), t.getMonth(), t.getDate())]) {
       n++;
       t.setDate(t.getDate() - 1);
     }
@@ -355,48 +510,85 @@
     for (let d = 1; d <= total; d++) {
       const el = document.createElement("button");
       const k = key(y, m, d);
+      const rating = log[k];
       const isFuture = new Date(y, m, d) > now;
       el.className = "day";
       el.textContent = d;
       if (k === todayKey()) el.classList.add("today");
-      if (days.has(k)) el.classList.add("done");
+      if (rating) el.classList.add("done", "r-" + rating);
+      if (k === justRated) {
+        el.classList.add("pop");
+        el.addEventListener("animationend", () => el.classList.remove("pop"), { once: true });
+      }
       if (isFuture) {
         el.classList.add("future");
         el.disabled = true;
         el.setAttribute("aria-label", `${MONTHS[m]} ${d} — future`);
       } else {
-        el.setAttribute("aria-label", `${MONTHS[m]} ${d} — ${days.has(k) ? "meditated" : "not marked"}`);
-        el.setAttribute("aria-pressed", days.has(k));
-        el.addEventListener("click", () => toggle(k, el));
+        el.setAttribute("aria-label", `${MONTHS[m]} ${d} — ${rating ? "meditated, " + LABELS[rating] : "not marked"}`);
+        el.addEventListener("click", () => openSheet(k, `${MONTHS[m]} ${d}, ${y}`));
       }
       grid.appendChild(el);
     }
+    justRated = null;
 
     updateStats(y, m);
-  }
-
-  function toggle(k, el) {
-    if (days.has(k)) {
-      days.delete(k);
-      el.classList.remove("done");
-    } else {
-      days.add(k);
-      el.classList.add("done", "pop");
-      el.addEventListener("animationend", () => el.classList.remove("pop"), { once: true });
-    }
-    el.setAttribute("aria-pressed", days.has(k));
-    save();
-    updateStats(view.getFullYear(), view.getMonth());
   }
 
   function updateStats(y, m) {
     const prefix = `${y}-${String(m + 1).padStart(2, "0")}`;
     let monthCount = 0;
-    for (const k of days) if (k.startsWith(prefix)) monthCount++;
+    for (const k in log) if (k.startsWith(prefix)) monthCount++;
     document.getElementById("stat-streak").textContent = streak();
     document.getElementById("stat-month").textContent = monthCount;
-    document.getElementById("stat-total").textContent = days.size;
+    document.getElementById("stat-total").textContent = Object.keys(log).length;
   }
+
+  /* ---------- rating sheet ---------- */
+  const sheet = document.getElementById("sheet");
+  const backdrop = document.getElementById("backdrop");
+  const removeBtn = document.getElementById("sheet-remove");
+
+  function openSheet(k, label) {
+    sheetKey = k;
+    document.getElementById("sheet-date").textContent = label;
+    document.querySelectorAll(".opt").forEach((b) =>
+      b.classList.toggle("selected", b.dataset.rating === log[k])
+    );
+    removeBtn.style.display = log[k] ? "block" : "none";
+    backdrop.classList.add("open");
+    sheet.classList.add("open");
+  }
+
+  function closeSheet() {
+    sheetKey = null;
+    backdrop.classList.remove("open");
+    sheet.classList.remove("open");
+  }
+
+  document.querySelectorAll(".opt").forEach((b) =>
+    b.addEventListener("click", () => {
+      if (!sheetKey) return;
+      log[sheetKey] = b.dataset.rating;
+      justRated = sheetKey;
+      save();
+      closeSheet();
+      render();
+    })
+  );
+
+  removeBtn.addEventListener("click", () => {
+    if (!sheetKey) return;
+    delete log[sheetKey];
+    save();
+    closeSheet();
+    render();
+  });
+
+  backdrop.addEventListener("click", closeSheet);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeSheet();
+  });
 
   document.getElementById("prev").addEventListener("click", () => {
     view.setMonth(view.getMonth() - 1);
