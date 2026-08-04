@@ -71,12 +71,24 @@
     50%      { transform: scale(1.35); box-shadow: 0 0 24px 8px var(--accent-glow); opacity: 1; }
   }
 
-  h1 {
+  .greeting {
+    display: block;
+    margin: 0 auto;
+    padding: 2px 6px;
+    background: none;
+    border: none;
+    color: var(--text);
+    max-width: 100%;
     font-family: "Cormorant Garamond", Georgia, serif;
-    font-size: 34px;
+    /* Scales down on narrow screens so a long name still fits on one line. */
+    font-size: clamp(23px, 7.4vw, 34px);
     font-weight: 500;
     letter-spacing: 0.02em;
+    line-height: 1.15;
+    cursor: pointer;
+    transition: opacity 0.2s;
   }
+  .greeting:hover { opacity: 0.75; }
 
   .tagline {
     margin-top: 6px;
@@ -87,72 +99,21 @@
     color: var(--text-dim);
   }
 
-  /* ---------- weekly goal ---------- */
-  .week {
-    position: relative;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 20px 16px 18px;
-    color: var(--text);
-    font-family: inherit;
-    cursor: pointer;
-    transition: border-color 0.25s, box-shadow 0.25s, background 0.2s;
-  }
-  .week:hover { background: var(--surface-2); }
-  .week.met {
-    border-color: rgba(163, 177, 138, 0.4);
-    box-shadow: 0 0 24px rgba(163, 177, 138, 0.1);
-  }
-
-  .week-label {
-    font-size: 10px;
-    font-weight: 400;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-  }
-
-  .week-frac {
-    font-family: "Cormorant Garamond", Georgia, serif;
-    font-variant-numeric: tabular-nums;
-    line-height: 1;
-  }
-  .week-frac b { font-size: 46px; font-weight: 500; color: var(--accent); }
-  .week-frac i { font-style: normal; font-size: 26px; color: var(--text-faint); margin-left: 7px; }
-  .week-frac span { font-size: 26px; color: var(--text-dim); margin-left: 7px; }
-
-  .week-dots { display: flex; gap: 7px; }
-  .wdot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    box-shadow: inset 0 0 0 1px rgba(163, 177, 138, 0.35);
-  }
-  .wdot.on { background: var(--accent); box-shadow: none; }
-
-  .week-pencil {
-    position: absolute;
-    top: 15px;
-    right: 16px;
-    color: var(--text-faint);
-    transition: color 0.2s;
-  }
-  .week:hover .week-pencil { color: var(--text-dim); }
-
   /* ---------- stats ---------- */
   .stats {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
     gap: 10px;
   }
 
+  /* Flex column rather than plain block: a <button> tile would otherwise
+     center its content vertically and sit lower than the <div> tiles. */
   .stat {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: var(--radius);
@@ -160,17 +121,54 @@
     text-align: center;
   }
 
+  /* The weekly-goal tile is the same tile, but tappable to edit the goal. */
+  .stat-btn {
+    font-family: inherit;
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.25s, box-shadow 0.25s, background 0.2s;
+  }
+  .stat-btn:hover { background: var(--surface-2); }
+  .stat-btn.met {
+    border-color: rgba(163, 177, 138, 0.4);
+    box-shadow: 0 0 20px rgba(163, 177, 138, 0.1);
+  }
+
+  .week-pencil {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: var(--text-faint);
+    transition: color 0.2s;
+  }
+  .stat-btn:hover .week-pencil { color: var(--text-dim); }
+
   .stat b {
     display: block;
     font-family: "Cormorant Garamond", Georgia, serif;
     font-size: 30px;
     font-weight: 500;
-    line-height: 1.1;
+    /* Fixed height and line-height so the smaller "/5" glyphs can't stretch
+       this row — every tile's number occupies the same box and the labels
+       line up across all three. */
+    line-height: 33px;
+    height: 33px;
     color: var(--accent);
     font-variant-numeric: tabular-nums;
   }
 
-  .stat span {
+  /* "3/5" — the goal reads smaller and dimmer than the count. */
+  .stat b i,
+  .stat b em {
+    font-style: normal;
+    font-size: 19px;
+    margin-left: 1px;
+  }
+  .stat b i { color: var(--text-faint); }
+  .stat b em { color: var(--text-dim); }
+
+  /* Direct child only — the count inside <b> is a span too. */
+  .stat > span {
     display: block;
     margin-top: 4px;
     font-size: 10px;
@@ -472,6 +470,23 @@
   }
   .goal-done:hover { background: rgba(163, 177, 138, 0.22); }
 
+  /* ---------- name sheet ---------- */
+  .name-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 16px; /* 16px keeps iOS from zooming on focus */
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .name-input::placeholder { color: var(--text-faint); }
+  .name-input:focus { border-color: rgba(163, 177, 138, 0.5); }
+
   /* ---------- footer legend ---------- */
   footer {
     display: flex;
@@ -488,7 +503,6 @@
   footer .sw-good { box-shadow: none; }
 
   @media (max-width: 380px) {
-    h1 { font-size: 30px; }
     .stat b { font-size: 26px; }
   }
 </style>
@@ -497,18 +511,16 @@
   <main class="app">
     <header>
       <div class="breath" aria-hidden="true"></div>
-      <h1>Zen</h1>
+      <button class="greeting" id="greeting" aria-haspopup="dialog">Zen</button>
       <p class="tagline">One breath at a time</p>
     </header>
 
-    <button class="week" id="week-card" aria-haspopup="dialog">
-      <svg class="week-pencil" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-      <span class="week-label">This week</span>
-      <span class="week-frac"><b id="week-count">0</b><i>/</i><span id="week-goal">5</span></span>
-      <span class="week-dots" id="week-dots" aria-hidden="true"></span>
-    </button>
-
     <section class="stats" aria-label="Statistics">
+      <button class="stat stat-btn" id="week-card" aria-haspopup="dialog">
+        <svg class="week-pencil" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        <b><span id="week-count">0</span><i>/</i><em id="week-goal">5</em></b>
+        <span>This week</span>
+      </button>
       <div class="stat"><b id="stat-month">0</b><span>This month</span></div>
       <div class="stat"><b id="stat-good">0</b><span>Good days</span></div>
     </section>
@@ -552,11 +564,21 @@
     <button class="goal-done" id="goal-done">Done</button>
   </div>
 
+  <div class="sheet" id="name-sheet" role="dialog" aria-modal="true" aria-labelledby="name-title">
+    <p class="sheet-date" id="name-kicker">Welcome</p>
+    <h2 class="sheet-title" id="name-title">What should we call you?</h2>
+    <input class="name-input" id="name-input" type="text" maxlength="24"
+           placeholder="Your name" autocomplete="given-name" enterkeyhint="done" />
+    <button class="goal-done" id="name-save">Begin</button>
+    <button class="sheet-remove" id="name-skip">Skip</button>
+  </div>
+
 <script>
 (() => {
   const STORAGE_KEY = "zen-meditation-log";
   const LEGACY_KEY = "zen-meditation-days";
   const GOAL_KEY = "zen-weekly-goal";
+  const NAME_KEY = "zen-name";
   const MONTHS = ["January","February","March","April","May","June",
                   "July","August","September","October","November","December"];
   const DOWS = ["S","M","T","W","T","F","S"];
@@ -568,6 +590,7 @@
   // log maps ISO date -> rating: "good" | "okay" | "rough"
   let log = load();
   let goal = loadGoal();
+  let name = localStorage.getItem(NAME_KEY) || "";
   let view = new Date();
   view.setDate(1);
   let sheetKey = null;   // date currently open in the rating sheet
@@ -689,13 +712,6 @@
     const wc = weekCount();
     document.getElementById("week-count").textContent = wc;
     document.getElementById("week-goal").textContent = goal;
-    const dots = document.getElementById("week-dots");
-    dots.innerHTML = "";
-    for (let i = 0; i < goal; i++) {
-      const dot = document.createElement("i");
-      dot.className = "wdot" + (i < wc ? " on" : "");
-      dots.appendChild(dot);
-    }
     const card = document.getElementById("week-card");
     card.classList.toggle("met", wc >= goal);
     card.setAttribute("aria-label", `This week: ${wc} of ${goal} sessions. Edit weekly goal.`);
@@ -722,6 +738,7 @@
     backdrop.classList.remove("open");
     sheet.classList.remove("open");
     goalSheet.classList.remove("open");
+    nameSheet.classList.remove("open");
   }
 
   document.querySelectorAll(".opt").forEach((b) =>
@@ -768,6 +785,55 @@
   document.getElementById("goal-minus").addEventListener("click", () => setGoal(goal - 1));
   document.getElementById("goal-plus").addEventListener("click", () => setGoal(goal + 1));
   document.getElementById("goal-done").addEventListener("click", closeSheet);
+
+  /* ---------- personal greeting ---------- */
+  const nameSheet = document.getElementById("name-sheet");
+  const nameInput = document.getElementById("name-input");
+  const nameSkip = document.getElementById("name-skip");
+
+  function renderGreeting() {
+    const h = new Date().getHours();
+    const partOfDay = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+    const el = document.getElementById("greeting");
+    el.textContent = name ? `${partOfDay}, ${name}` : "Zen";
+    el.setAttribute("aria-label", name ? `${partOfDay}, ${name}. Change your name.` : "Set your name");
+  }
+
+  function openNameSheet(firstRun) {
+    document.getElementById("name-kicker").textContent = firstRun ? "Welcome" : "Your name";
+    document.getElementById("name-save").textContent = firstRun ? "Begin" : "Save";
+    nameSkip.style.display = firstRun ? "block" : "none";
+    nameInput.value = name;
+    backdrop.classList.add("open");
+    nameSheet.classList.add("open");
+    setTimeout(() => nameInput.focus(), 320);
+  }
+
+  function saveName() {
+    name = nameInput.value.trim().slice(0, 24);
+    localStorage.setItem(NAME_KEY, name);
+    renderGreeting();
+    closeSheet();
+  }
+
+  document.getElementById("greeting").addEventListener("click", () => openNameSheet(false));
+  document.getElementById("name-save").addEventListener("click", saveName);
+  nameSkip.addEventListener("click", () => {
+    localStorage.setItem(NAME_KEY, "");
+    closeSheet();
+  });
+  nameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") saveName();
+  });
+
+  renderGreeting();
+  // Keep the greeting honest if the app is left open across morning/evening.
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) renderGreeting();
+  });
+
+  // First run: ask who this is.
+  if (localStorage.getItem(NAME_KEY) === null) openNameSheet(true);
 
   document.getElementById("prev").addEventListener("click", () => {
     view.setMonth(view.getMonth() - 1);
