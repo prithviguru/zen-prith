@@ -87,10 +87,68 @@
     color: var(--text-dim);
   }
 
+  /* ---------- weekly goal ---------- */
+  .week {
+    position: relative;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px 16px 18px;
+    color: var(--text);
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.25s, box-shadow 0.25s, background 0.2s;
+  }
+  .week:hover { background: var(--surface-2); }
+  .week.met {
+    border-color: rgba(163, 177, 138, 0.4);
+    box-shadow: 0 0 24px rgba(163, 177, 138, 0.1);
+  }
+
+  .week-label {
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .week-frac {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .week-frac b { font-size: 46px; font-weight: 500; color: var(--accent); }
+  .week-frac i { font-style: normal; font-size: 26px; color: var(--text-faint); margin-left: 7px; }
+  .week-frac span { font-size: 26px; color: var(--text-dim); margin-left: 7px; }
+
+  .week-dots { display: flex; gap: 7px; }
+  .wdot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px rgba(163, 177, 138, 0.35);
+  }
+  .wdot.on { background: var(--accent); box-shadow: none; }
+
+  .week-pencil {
+    position: absolute;
+    top: 15px;
+    right: 16px;
+    color: var(--text-faint);
+    transition: color 0.2s;
+  }
+  .week:hover .week-pencil { color: var(--text-dim); }
+
   /* ---------- stats ---------- */
   .stats {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 10px;
   }
 
@@ -360,6 +418,60 @@
   }
   .sheet-remove:hover { color: #c99a8f; }
 
+  /* ---------- goal sheet ---------- */
+  .stepper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    margin: 6px 0 4px;
+  }
+
+  .step-btn {
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, background 0.2s, transform 0.15s;
+  }
+  .step-btn:hover { color: var(--text); border-color: rgba(255, 255, 255, 0.18); }
+  .step-btn:active { transform: scale(0.92); }
+
+  .goal-num {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 46px;
+    font-weight: 500;
+    color: var(--accent);
+    min-width: 52px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .goal-done {
+    display: block;
+    width: 100%;
+    margin-top: 16px;
+    padding: 13px;
+    background: var(--accent-soft);
+    border: none;
+    border-radius: 14px;
+    color: var(--accent);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .goal-done:hover { background: rgba(163, 177, 138, 0.22); }
+
   /* ---------- footer legend ---------- */
   footer {
     display: flex;
@@ -389,8 +501,14 @@
       <p class="tagline">One breath at a time</p>
     </header>
 
+    <button class="week" id="week-card" aria-haspopup="dialog">
+      <svg class="week-pencil" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      <span class="week-label">This week</span>
+      <span class="week-frac"><b id="week-count">0</b><i>/</i><span id="week-goal">5</span></span>
+      <span class="week-dots" id="week-dots" aria-hidden="true"></span>
+    </button>
+
     <section class="stats" aria-label="Statistics">
-      <div class="stat"><b id="stat-streak">0</b><span>Streak</span></div>
       <div class="stat"><b id="stat-month">0</b><span>This month</span></div>
       <div class="stat"><b id="stat-total">0</b><span>All time</span></div>
     </section>
@@ -423,10 +541,22 @@
     <button class="sheet-remove" id="sheet-remove">Remove this day</button>
   </div>
 
+  <div class="sheet" id="goal-sheet" role="dialog" aria-modal="true" aria-labelledby="goal-title">
+    <p class="sheet-date">Weekly goal</p>
+    <h2 class="sheet-title" id="goal-title">Sessions per week</h2>
+    <div class="stepper">
+      <button class="step-btn" id="goal-minus" aria-label="Decrease goal">&minus;</button>
+      <span class="goal-num" id="goal-num">5</span>
+      <button class="step-btn" id="goal-plus" aria-label="Increase goal">+</button>
+    </div>
+    <button class="goal-done" id="goal-done">Done</button>
+  </div>
+
 <script>
 (() => {
   const STORAGE_KEY = "zen-meditation-log";
   const LEGACY_KEY = "zen-meditation-days";
+  const GOAL_KEY = "zen-weekly-goal";
   const MONTHS = ["January","February","March","April","May","June",
                   "July","August","September","October","November","December"];
   const DOWS = ["S","M","T","W","T","F","S"];
@@ -437,6 +567,7 @@
 
   // log maps ISO date -> rating: "good" | "okay" | "rough"
   let log = load();
+  let goal = loadGoal();
   let view = new Date();
   view.setDate(1);
   let sheetKey = null;   // date currently open in the rating sheet
@@ -471,14 +602,23 @@
     return key(t.getFullYear(), t.getMonth(), t.getDate());
   }
 
-  function streak() {
+  function loadGoal() {
+    const g = parseInt(localStorage.getItem(GOAL_KEY), 10);
+    return g >= 1 && g <= 7 ? g : 5;
+  }
+
+  function saveGoal() {
+    localStorage.setItem(GOAL_KEY, String(goal));
+  }
+
+  // Sessions in the current week (Sunday–Saturday, matching the calendar).
+  function weekCount() {
     const t = new Date();
-    // A streak is alive if today OR yesterday is marked (today isn't over yet).
-    if (!log[todayKey()]) t.setDate(t.getDate() - 1);
+    const start = new Date(t.getFullYear(), t.getMonth(), t.getDate() - t.getDay());
     let n = 0;
-    while (log[key(t.getFullYear(), t.getMonth(), t.getDate())]) {
-      n++;
-      t.setDate(t.getDate() - 1);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      if (log[key(d.getFullYear(), d.getMonth(), d.getDate())]) n++;
     }
     return n;
   }
@@ -539,9 +679,22 @@
     const prefix = `${y}-${String(m + 1).padStart(2, "0")}`;
     let monthCount = 0;
     for (const k in log) if (k.startsWith(prefix)) monthCount++;
-    document.getElementById("stat-streak").textContent = streak();
     document.getElementById("stat-month").textContent = monthCount;
     document.getElementById("stat-total").textContent = Object.keys(log).length;
+
+    const wc = weekCount();
+    document.getElementById("week-count").textContent = wc;
+    document.getElementById("week-goal").textContent = goal;
+    const dots = document.getElementById("week-dots");
+    dots.innerHTML = "";
+    for (let i = 0; i < goal; i++) {
+      const dot = document.createElement("i");
+      dot.className = "wdot" + (i < wc ? " on" : "");
+      dots.appendChild(dot);
+    }
+    const card = document.getElementById("week-card");
+    card.classList.toggle("met", wc >= goal);
+    card.setAttribute("aria-label", `This week: ${wc} of ${goal} sessions. Edit weekly goal.`);
   }
 
   /* ---------- rating sheet ---------- */
@@ -564,6 +717,7 @@
     sheetKey = null;
     backdrop.classList.remove("open");
     sheet.classList.remove("open");
+    goalSheet.classList.remove("open");
   }
 
   document.querySelectorAll(".opt").forEach((b) =>
@@ -589,6 +743,27 @@
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeSheet();
   });
+
+  /* ---------- weekly goal sheet ---------- */
+  const goalSheet = document.getElementById("goal-sheet");
+  const goalNum = document.getElementById("goal-num");
+
+  function setGoal(g) {
+    goal = Math.min(7, Math.max(1, g));
+    goalNum.textContent = goal;
+    saveGoal();
+    updateStats(view.getFullYear(), view.getMonth());
+  }
+
+  document.getElementById("week-card").addEventListener("click", () => {
+    goalNum.textContent = goal;
+    backdrop.classList.add("open");
+    goalSheet.classList.add("open");
+  });
+
+  document.getElementById("goal-minus").addEventListener("click", () => setGoal(goal - 1));
+  document.getElementById("goal-plus").addEventListener("click", () => setGoal(goal + 1));
+  document.getElementById("goal-done").addEventListener("click", closeSheet);
 
   document.getElementById("prev").addEventListener("click", () => {
     view.setMonth(view.getMonth() - 1);
