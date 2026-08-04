@@ -28,3 +28,24 @@ or serve it if you prefer:
 python3 -m http.server
 # → http://localhost:8000
 ```
+
+## Roadmap: cloud sync & accounts
+
+Today all data is device-local (`localStorage`), which is deliberate for v1.
+The planned evolution is user log-ins with cloud-stored data, so a reinstall
+or new device restores your history. Design decisions already made with that
+in mind:
+
+- **Data model**: meditated days are a set of ISO date strings
+  (`"2026-08-04"`). This maps 1:1 to a backend table of
+  `(user_id, date)` rows — no migration gymnastics needed.
+- **Storage seam**: all persistence goes through the `load()`/`save()`
+  helpers in `index.html`. Cloud sync means swapping those internals for a
+  backend adapter (likely Supabase: hosted auth + Postgres, generous free
+  tier), not restructuring the app.
+- **Offline-first stays**: `localStorage` remains as the local cache; the
+  backend becomes the source of truth, synced when online. The service
+  worker already handles offline shell loading.
+- **Migration path**: on a user's first sign-in, upload the local day set,
+  then merge server-side. Existing users lose nothing.
+

@@ -413,6 +413,11 @@
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js");
   }
+
+  // Ask the browser not to evict our storage under disk pressure.
+  if (navigator.storage && navigator.storage.persist) {
+    navigator.storage.persist();
+  }
 })();
 </script>
 </body>
