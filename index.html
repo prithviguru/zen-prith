@@ -510,7 +510,7 @@
 
     <section class="stats" aria-label="Statistics">
       <div class="stat"><b id="stat-month">0</b><span>This month</span></div>
-      <div class="stat"><b id="stat-total">0</b><span>All time</span></div>
+      <div class="stat"><b id="stat-good">0</b><span>Good days</span></div>
     </section>
 
     <section class="calendar" aria-label="Calendar">
@@ -677,10 +677,14 @@
 
   function updateStats(y, m) {
     const prefix = `${y}-${String(m + 1).padStart(2, "0")}`;
-    let monthCount = 0;
-    for (const k in log) if (k.startsWith(prefix)) monthCount++;
+    let monthCount = 0, goodCount = 0;
+    for (const k in log) {
+      if (!k.startsWith(prefix)) continue;
+      monthCount++;
+      if (log[k] === "good") goodCount++;
+    }
     document.getElementById("stat-month").textContent = monthCount;
-    document.getElementById("stat-total").textContent = Object.keys(log).length;
+    document.getElementById("stat-good").textContent = goodCount;
 
     const wc = weekCount();
     document.getElementById("week-count").textContent = wc;

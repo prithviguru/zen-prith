@@ -2,7 +2,7 @@
 // cache-first with a background refresh (stale-while-revalidate), so the
 // app opens instantly and works fully offline once visited.
 
-const CACHE = "zen-v4";
+const CACHE = "zen-v5";
 const SHELL = [
   "./",
   "./index.html",
