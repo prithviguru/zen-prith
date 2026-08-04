@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Zen — Meditation Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0e1113;
+    --surface: #15191c;
+    --surface-2: #1b2024;
+    --line: rgba(255, 255, 255, 0.06);
+    --text: #e8e4dc;
+    --text-dim: #8a877f;
+    --text-faint: #55534d;
+    --accent: #a3b18a;
+    --accent-soft: rgba(163, 177, 138, 0.14);
+    --accent-glow: rgba(163, 177, 138, 0.35);
+    --radius: 20px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    background: var(--bg);
+    background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(163, 177, 138, 0.07), transparent);
+    color: var(--text);
+    font-family: "Inter", system-ui, sans-serif;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  /* ---------- header ---------- */
+  header { text-align: center; }
+
+  .breath {
+    width: 10px;
+    height: 10px;
+    margin: 0 auto 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: breathe 6s ease-in-out infinite;
+  }
+
+  @keyframes breathe {
+    0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0 var(--accent-glow); opacity: 0.7; }
+    50%      { transform: scale(1.35); box-shadow: 0 0 24px 8px var(--accent-glow); opacity: 1; }
+  }
+
+  h1 {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 34px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  .tagline {
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 300;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  /* ---------- stats ---------- */
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px 8px 14px;
+    text-align: center;
+  }
+
+  .stat b {
+    display: block;
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 30px;
+    font-weight: 500;
+    line-height: 1.1;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat span {
+    display: block;
+    margin-top: 4px;
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  /* ---------- calendar ---------- */
+  .calendar {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px 18px 22px;
+  }
+
+  .cal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+
+  .cal-title {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  .cal-title em {
+    font-style: italic;
+    color: var(--text-dim);
+    margin-left: 6px;
+  }
+
+  .nav-btn {
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+  }
+
+  .nav-btn:hover {
+    color: var(--text);
+    border-color: rgba(255, 255, 255, 0.18);
+    background: var(--surface-2);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px 4px;
+  }
+
+  .dow {
+    text-align: center;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    color: var(--text-faint);
+    padding-bottom: 8px;
+  }
+
+  .day {
+    position: relative;
+    aspect-ratio: 1;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, transform 0.15s;
+  }
+
+  .day:hover { background: var(--surface-2); }
+  .day:active { transform: scale(0.9); }
+
+  .day.blank { cursor: default; }
+  .day.blank:hover { background: transparent; }
+
+  .day.future {
+    color: var(--text-faint);
+    cursor: default;
+  }
+  .day.future:hover { background: transparent; }
+  .day.future:active { transform: none; }
+
+  .day.today::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 5px;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--text-dim);
+  }
+
+  .day.done {
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 500;
+    box-shadow: inset 0 0 0 1px rgba(163, 177, 138, 0.35);
+  }
+
+  .day.done:hover { background: rgba(163, 177, 138, 0.22); }
+
+  .day.done.today::after { background: var(--accent); }
+
+  .day.pop { animation: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+  @keyframes pop {
+    0%   { transform: scale(0.7); }
+    60%  { transform: scale(1.12); }
+    100% { transform: scale(1); }
+  }
+
+  /* ---------- footer ---------- */
+  footer {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 300;
+    letter-spacing: 0.06em;
+    color: var(--text-faint);
+  }
+
+  @media (max-width: 380px) {
+    h1 { font-size: 30px; }
+    .stat b { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div class="breath" aria-hidden="true"></div>
+      <h1>Zen</h1>
+      <p class="tagline">One breath at a time</p>
+    </header>
+
+    <section class="stats" aria-label="Statistics">
+      <div class="stat"><b id="stat-streak">0</b><span>Streak</span></div>
+      <div class="stat"><b id="stat-month">0</b><span>This month</span></div>
+      <div class="stat"><b id="stat-total">0</b><span>All time</span></div>
+    </section>
+
+    <section class="calendar" aria-label="Calendar">
+      <div class="cal-head">
+        <button class="nav-btn" id="prev" aria-label="Previous month">&#8249;</button>
+        <div class="cal-title" id="cal-title"></div>
+        <button class="nav-btn" id="next" aria-label="Next month">&#8250;</button>
+      </div>
+      <div class="grid" id="grid"></div>
+    </section>
+
+    <footer>Tap a day to mark your meditation</footer>
+  </main>
+
+<script>
+(() => {
+  const STORAGE_KEY = "zen-meditation-days";
+  const MONTHS = ["January","February","March","April","May","June",
+                  "July","August","September","October","November","December"];
+  const DOWS = ["S","M","T","W","T","F","S"];
+
+  const grid = document.getElementById("grid");
+  const title = document.getElementById("cal-title");
+
+  let days = load();
+  let view = new Date();
+  view.setDate(1);
+
+  function load() {
+    try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY)) || []); }
+    catch { return new Set(); }
+  }
+
+  function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...days]));
+  }
+
+  function key(y, m, d) {
+    return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  }
+
+  function todayKey() {
+    const t = new Date();
+    return key(t.getFullYear(), t.getMonth(), t.getDate());
+  }
+
+  function streak() {
+    const t = new Date();
+    // A streak is alive if today OR yesterday is marked (today isn't over yet).
+    if (!days.has(todayKey())) t.setDate(t.getDate() - 1);
+    let n = 0;
+    while (days.has(key(t.getFullYear(), t.getMonth(), t.getDate()))) {
+      n++;
+      t.setDate(t.getDate() - 1);
+    }
+    return n;
+  }
+
+  function render() {
+    const y = view.getFullYear(), m = view.getMonth();
+    const now = new Date();
+    const thisMonth = now.getFullYear() === y && now.getMonth() === m;
+
+    title.innerHTML = `${MONTHS[m]} <em>${y}</em>`;
+    grid.innerHTML = "";
+
+    for (const d of DOWS) {
+      const el = document.createElement("div");
+      el.className = "dow";
+      el.textContent = d;
+      grid.appendChild(el);
+    }
+
+    const firstDow = new Date(y, m, 1).getDay();
+    const total = new Date(y, m + 1, 0).getDate();
+
+    for (let i = 0; i < firstDow; i++) {
+      const el = document.createElement("div");
+      el.className = "day blank";
+      grid.appendChild(el);
+    }
+
+    for (let d = 1; d <= total; d++) {
+      const el = document.createElement("button");
+      const k = key(y, m, d);
+      const isFuture = new Date(y, m, d) > now;
+      el.className = "day";
+      el.textContent = d;
+      if (k === todayKey()) el.classList.add("today");
+      if (days.has(k)) el.classList.add("done");
+      if (isFuture) {
+        el.classList.add("future");
+        el.disabled = true;
+        el.setAttribute("aria-label", `${MONTHS[m]} ${d} — future`);
+      } else {
+        el.setAttribute("aria-label", `${MONTHS[m]} ${d} — ${days.has(k) ? "meditated" : "not marked"}`);
+        el.setAttribute("aria-pressed", days.has(k));
+        el.addEventListener("click", () => toggle(k, el));
+      }
+      grid.appendChild(el);
+    }
+
+    updateStats(y, m);
+  }
+
+  function toggle(k, el) {
+    if (days.has(k)) {
+      days.delete(k);
+      el.classList.remove("done");
+    } else {
+      days.add(k);
+      el.classList.add("done", "pop");
+      el.addEventListener("animationend", () => el.classList.remove("pop"), { once: true });
+    }
+    el.setAttribute("aria-pressed", days.has(k));
+    save();
+    updateStats(view.getFullYear(), view.getMonth());
+  }
+
+  function updateStats(y, m) {
+    const prefix = `${y}-${String(m + 1).padStart(2, "0")}`;
+    let monthCount = 0;
+    for (const k of days) if (k.startsWith(prefix)) monthCount++;
+    document.getElementById("stat-streak").textContent = streak();
+    document.getElementById("stat-month").textContent = monthCount;
+    document.getElementById("stat-total").textContent = days.size;
+  }
+
+  document.getElementById("prev").addEventListener("click", () => {
+    view.setMonth(view.getMonth() - 1);
+    render();
+  });
+
+  document.getElementById("next").addEventListener("click", () => {
+    view.setMonth(view.getMonth() + 1);
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
