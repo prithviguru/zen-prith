@@ -454,18 +454,28 @@
     color: var(--accent);
   }
 
+  .dur-plus { min-width: 42px; font-size: 15px; line-height: 1; }
+
   .dur-input {
     width: 74px;
     background: var(--surface);
-    border: 1px solid rgba(163, 177, 138, 0.55);
+    border: 1px solid var(--line);
     border-radius: 999px;
     padding: 8px 10px;
-    color: var(--accent);
+    color: var(--text);
     font-family: inherit;
     font-size: 16px; /* 16px keeps iOS from zooming on focus */
     text-align: center;
     outline: none;
     -moz-appearance: textfield;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+  }
+  .dur-input::placeholder { color: var(--text-faint); }
+  .dur-input:focus { border-color: rgba(163, 177, 138, 0.5); }
+  .dur-input.selected {
+    border-color: rgba(163, 177, 138, 0.55);
+    background: rgba(163, 177, 138, 0.1);
+    color: var(--accent);
   }
   .dur-input::-webkit-outer-spin-button,
   .dur-input::-webkit-inner-spin-button {
@@ -825,40 +835,38 @@
     // set; keep it visible rather than silently dropping it.
     const vals = !selMinutes || base.includes(selMinutes) ? base : [selMinutes, ...base];
 
-    const none = document.createElement("button");
-    none.className = "dur" + (selMinutes ? "" : " selected");
-    none.textContent = "—";
-    none.setAttribute("aria-label", "No length recorded");
-    none.addEventListener("click", () => setDuration(null));
-    row.appendChild(none);
+    row.appendChild(durChip("—", null, "No length recorded"));
+    for (const v of vals) row.appendChild(durChip(`${v} min`, v));
 
-    for (const v of vals) {
-      const b = document.createElement("button");
-      b.className = "dur" + (v === selMinutes ? " selected" : "");
-      b.textContent = `${v} min`;
-      b.addEventListener("click", () => setDuration(v));
-      row.appendChild(b);
-    }
-
-    const last = document.createElement("button");
-    last.className = "dur";
     if (durExpanded) {
-      last.textContent = "+";
-      last.setAttribute("aria-label", "Enter another length in minutes");
-      last.addEventListener("click", () => showCustom(last));
+      row.appendChild(durInput());
     } else {
-      last.textContent = "More";
-      last.setAttribute("aria-label", "Show more lengths");
-      last.addEventListener("click", () => {
+      const plus = document.createElement("button");
+      plus.className = "dur dur-plus";
+      plus.textContent = "+";
+      plus.setAttribute("aria-label", "More lengths");
+      plus.addEventListener("click", () => {
         durExpanded = true;
         renderDurs();
       });
+      row.appendChild(plus);
     }
-    row.appendChild(last);
+    markDurSelection();
   }
 
-  // The "+" chip becomes a number field in place, so any length can be typed.
-  function showCustom(btn) {
+  function durChip(label, v, aria) {
+    const b = document.createElement("button");
+    b.className = "dur";
+    b.textContent = label;
+    if (v == null) b.dataset.none = "1";
+    else b.dataset.min = v;
+    if (aria) b.setAttribute("aria-label", aria);
+    b.addEventListener("click", () => setDuration(v));
+    return b;
+  }
+
+  // Typing a length lives in the expanded row rather than behind another tap.
+  function durInput() {
     const input = document.createElement("input");
     input.type = "number";
     input.inputMode = "numeric";
@@ -867,40 +875,50 @@
     input.max = "600";
     input.placeholder = "min";
     input.setAttribute("aria-label", "Length in minutes");
+    if (selMinutes && !DUR_ALL.includes(selMinutes)) input.value = selMinutes;
 
-    // Removing a focused input fires blur, so guard against committing twice
-    // — or committing at all after the field has been cancelled.
-    let settled = false;
-    const commit = () => {
-      if (settled) return;
-      settled = true;
+    // "change" fires once, on Enter or on blur — no double-commit to guard.
+    input.addEventListener("change", () => {
+      if (input.value === "") return;
       const v = Math.round(Number(input.value));
-      if (input.value !== "" && v >= 1 && v <= 600) setDuration(v);
-      else renderDurs();
-    };
-    const cancel = () => {
-      if (settled) return;
-      settled = true;
-      renderDurs();
-    };
+      if (v >= 1 && v <= 600) setDuration(v);
+      else input.value = selMinutes && !DUR_ALL.includes(selMinutes) ? selMinutes : "";
+    });
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        commit();
+        input.blur();
       } else if (e.key === "Escape") {
         e.stopPropagation(); // don't let Escape close the whole sheet
-        cancel();
+        input.value = "";
+        input.blur();
       }
     });
-    input.addEventListener("blur", commit);
+    return input;
+  }
 
-    btn.replaceWith(input);
-    input.focus();
+  // Repaint selection in place. Rebuilding the row here would tear down the
+  // element a tap is landing on — a rating tapped straight after typing a
+  // length would be swallowed.
+  function markDurSelection() {
+    const row = document.getElementById("dur-row");
+    let onChip = false;
+    row.querySelectorAll(".dur").forEach((el) => {
+      const v = el.dataset.min ? Number(el.dataset.min) : null;
+      const on = el.dataset.none ? !selMinutes : v === selMinutes;
+      el.classList.toggle("selected", !!on);
+      if (on && v) onChip = true;
+    });
+    const input = row.querySelector(".dur-input");
+    if (input) {
+      input.classList.toggle("selected", !!selMinutes && !onChip);
+      if (onChip) input.value = "";
+    }
   }
 
   function setDuration(v) {
     selMinutes = v;
-    renderDurs();
+    markDurSelection();
     // If the day is already logged, changing the length saves on the spot —
     // no need to re-pick a rating just to adjust the minutes.
     const e = log[sheetKey];
