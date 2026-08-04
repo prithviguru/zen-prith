@@ -416,6 +416,44 @@
   }
   .sheet-remove:hover { color: #c99a8f; }
 
+  /* ---------- session length ---------- */
+  .dur-label {
+    margin: -10px 0 9px;
+    text-align: center;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .dur-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 7px;
+    margin-bottom: 20px;
+  }
+
+  .dur {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 8px 14px;
+    color: var(--text-faint);
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s, background 0.2s, transform 0.15s;
+  }
+  .dur:hover { color: var(--text-dim); border-color: rgba(255, 255, 255, 0.14); }
+  .dur:active { transform: scale(0.94); }
+  .dur.selected {
+    border-color: rgba(163, 177, 138, 0.55);
+    background: rgba(163, 177, 138, 0.1);
+    color: var(--accent);
+  }
+
   /* ---------- goal sheet ---------- */
   .stepper {
     display: flex;
@@ -545,6 +583,8 @@
   <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
     <p class="sheet-date" id="sheet-date"></p>
     <h2 class="sheet-title" id="sheet-title">How was your session today?</h2>
+    <p class="dur-label">How long?</p>
+    <div class="dur-row" id="dur-row"></div>
     <div class="opts">
       <button class="opt" data-rating="good"><i class="dot-sw sw-good"></i>Good</button>
       <button class="opt" data-rating="okay"><i class="dot-sw sw-okay"></i>Okay</button>
@@ -594,17 +634,30 @@
   let view = new Date();
   view.setDate(1);
   let sheetKey = null;   // date currently open in the rating sheet
+  let selMinutes = null; // length chosen in the sheet, null = not recorded
   let justRated = null;  // date to pop-animate on next render
 
   function load() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) return JSON.parse(raw) || {};
+      if (raw) {
+        // v2 stored a bare rating string; v3 stores { rating, minutes }.
+        const parsed = JSON.parse(raw) || {};
+        let changed = false;
+        for (const k in parsed) {
+          if (typeof parsed[k] === "string") {
+            parsed[k] = { rating: parsed[k] };
+            changed = true;
+          }
+        }
+        if (changed) localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        return parsed;
+      }
       // Migrate v1 data: unrated marked days become "okay".
       const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY));
       if (Array.isArray(legacy) && legacy.length) {
         const migrated = {};
-        for (const d of legacy) migrated[d] = "okay";
+        for (const d of legacy) migrated[d] = { rating: "okay" };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
         return migrated;
       }
@@ -673,7 +726,8 @@
     for (let d = 1; d <= total; d++) {
       const el = document.createElement("button");
       const k = key(y, m, d);
-      const rating = log[k];
+      const entry = log[k];
+      const rating = entry && entry.rating;
       const isFuture = new Date(y, m, d) > now;
       el.className = "day";
       el.textContent = d;
@@ -688,7 +742,8 @@
         el.disabled = true;
         el.setAttribute("aria-label", `${MONTHS[m]} ${d} — future`);
       } else {
-        el.setAttribute("aria-label", `${MONTHS[m]} ${d} — ${rating ? "meditated, " + LABELS[rating] : "not marked"}`);
+        const mins = entry && entry.minutes ? `, ${entry.minutes} minutes` : "";
+        el.setAttribute("aria-label", `${MONTHS[m]} ${d} — ${rating ? "meditated, " + LABELS[rating] + mins : "not marked"}`);
         el.addEventListener("click", () => openSheet(k, `${MONTHS[m]} ${d}, ${y}`));
       }
       grid.appendChild(el);
@@ -704,7 +759,7 @@
     for (const k in log) {
       if (!k.startsWith(prefix)) continue;
       monthCount++;
-      if (log[k] === "good") goodCount++;
+      if (log[k].rating === "good") goodCount++;
     }
     document.getElementById("stat-month").textContent = monthCount;
     document.getElementById("stat-good").textContent = goodCount;
@@ -724,13 +779,58 @@
 
   function openSheet(k, label) {
     sheetKey = k;
+    const e = log[k];
+    selMinutes = (e && e.minutes) || null;
     document.getElementById("sheet-date").textContent = label;
     document.querySelectorAll(".opt").forEach((b) =>
-      b.classList.toggle("selected", b.dataset.rating === log[k])
+      b.classList.toggle("selected", b.dataset.rating === (e && e.rating))
     );
-    removeBtn.style.display = log[k] ? "block" : "none";
+    renderDurs();
+    removeBtn.style.display = e ? "block" : "none";
     backdrop.classList.add("open");
     sheet.classList.add("open");
+  }
+
+  /* ---------- session length ---------- */
+  const DURATIONS = [5, 10, 15, 20, 30, 45];
+
+  function renderDurs() {
+    const row = document.getElementById("dur-row");
+    row.innerHTML = "";
+    // A length typed on another device (or a future timer) may not be a preset;
+    // keep it visible rather than silently dropping it.
+    const vals = DURATIONS.includes(selMinutes) || !selMinutes
+      ? DURATIONS
+      : [selMinutes, ...DURATIONS];
+
+    const none = document.createElement("button");
+    none.className = "dur" + (selMinutes ? "" : " selected");
+    none.textContent = "—";
+    none.setAttribute("aria-label", "No length recorded");
+    none.addEventListener("click", () => setDuration(null));
+    row.appendChild(none);
+
+    for (const v of vals) {
+      const b = document.createElement("button");
+      b.className = "dur" + (v === selMinutes ? " selected" : "");
+      b.textContent = `${v} min`;
+      b.addEventListener("click", () => setDuration(v));
+      row.appendChild(b);
+    }
+  }
+
+  function setDuration(v) {
+    selMinutes = v;
+    renderDurs();
+    // If the day is already logged, changing the length saves on the spot —
+    // no need to re-pick a rating just to adjust the minutes.
+    const e = log[sheetKey];
+    if (e) {
+      if (v) e.minutes = v;
+      else delete e.minutes;
+      save();
+      render();
+    }
   }
 
   function closeSheet() {
@@ -744,7 +844,8 @@
   document.querySelectorAll(".opt").forEach((b) =>
     b.addEventListener("click", () => {
       if (!sheetKey) return;
-      log[sheetKey] = b.dataset.rating;
+      log[sheetKey] = { rating: b.dataset.rating };
+      if (selMinutes) log[sheetKey].minutes = selMinutes;
       justRated = sheetKey;
       save();
       closeSheet();

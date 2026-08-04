@@ -55,28 +55,23 @@ in the same stretch of work.
 
 ---
 
-## 2. Log session length in minutes
+## 2. Stats built on session length
 
-> Record how many minutes you meditated, not just that you did.
+> Now that minutes are recorded, do something with them.
 
-**Status:** not started.
+**Status:** not started. Manual minute entry shipped — entries are
+`{"2026-08-04": {"rating": "good", "minutes": 20}}`, with `minutes`
+optional — so the data is accumulating and these are all additive.
 
-**Sketch:** the rating sheet gains a duration alongside good/okay/not great —
-probably a few preset chips (10 / 15 / 20 / 30 min) plus a custom option,
-since a stepper for arbitrary minutes is slow on a phone. Duration should be
-optional so logging a session never becomes a chore; a day with a rating and
-no duration must stay valid.
+**Candidates:** total minutes this week or month as a dashboard stat, average
+session length, longest sit. The dashboard only has room for three tiles, so
+adding one means deciding what it replaces.
 
-**Data model impact:** entries become objects rather than plain strings —
-`{"2026-08-04": {"rating": "good", "minutes": 20}}` instead of
-`{"2026-08-04": "good"}`. Needs a migration on load like the v1 → v2 one
-already in `load()`, and the cloud-sync table in item 3 gains a nullable
-`minutes` column.
-
-**Opens up:** total minutes this week/month as a dashboard stat, average
-session length, and a weekly goal expressed in minutes rather than sessions.
-Worth deciding at build time whether the weekly goal stays "sessions per
-week" or becomes switchable to "minutes per week".
+**Bigger question:** should the weekly goal be expressible in *minutes* per
+week rather than sessions per week? That's a real fork — it changes the goal
+sheet, the "3/5" tile, and what "met" means. Worth waiting until there's a
+few months of duration data to see whether sessions or minutes is the
+motivating number.
 
 ---
 
@@ -85,10 +80,10 @@ week" or becomes switchable to "minutes per week".
 > Start a timer when you sit; it logs the duration automatically when you
 > finish.
 
-**Status:** not started. Pairs with item 2 — the timer is the automatic way to
-fill in the minutes, manual entry the fallback for sessions done elsewhere.
-Item 2's data model is a prerequisite, so these are probably one piece of
-work.
+**Status:** not started, and no longer blocked — the `minutes` field and the
+manual entry it falls back to are both shipped. The timer becomes the
+automatic way to fill that field in, and stays optional: sessions done away
+from the phone are still logged by hand.
 
 **Sketch:** a start button on the main screen. Either count up (open-ended)
 or count down from a target (10/15/20 min) — worth supporting both, since
