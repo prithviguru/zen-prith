@@ -80,7 +80,46 @@ week" or becomes switchable to "minutes per week".
 
 ---
 
-## 3. Cloud sync and accounts
+## 3. Built-in timer / stopwatch
+
+> Start a timer when you sit; it logs the duration automatically when you
+> finish.
+
+**Status:** not started. Pairs with item 2 — the timer is the automatic way to
+fill in the minutes, manual entry the fallback for sessions done elsewhere.
+Item 2's data model is a prerequisite, so these are probably one piece of
+work.
+
+**Sketch:** a start button on the main screen. Either count up (open-ended)
+or count down from a target (10/15/20 min) — worth supporting both, since
+people sit both ways. On finish, the rating sheet opens with the duration
+already filled in, so a logged session is one tap instead of two decisions.
+The breathing dot in the header is the obvious visual for a running timer.
+
+**Technical notes, mostly about the timer surviving real phone use:**
+
+- **Never count intervals.** Background tabs throttle `setInterval` badly and
+  locked phones stop it altogether. Store the start timestamp and derive
+  elapsed time from `Date.now()` on each tick, so the display is correct
+  after the screen has been off for twenty minutes.
+- **Persist the start timestamp** to `localStorage`. Closing the app mid-sit
+  (or iOS evicting it from memory) should not lose the session — on next
+  open, a running timer resumes with the correct elapsed time.
+- **Keep the screen awake** while the timer runs via the Wake Lock API
+  (Chrome, and Safari 16.4+), releasing it on finish. Optional, but a screen
+  that dims mid-sit is annoying.
+- **A chime at the end is harder than it looks.** iOS only allows audio after
+  a user gesture, and a backgrounded PWA can't reliably make noise. A
+  countdown that ends while the phone is locked probably needs a local
+  notification, which ties back to the push work in item 1.
+
+**Open question:** should a completed timer log the session automatically, or
+still ask for the rating first? Leaning toward always asking — the rating is
+the point of the app — but with the duration pre-filled.
+
+---
+
+## 4. Cloud sync and accounts
 
 > So history survives deleting the app or switching phones.
 
