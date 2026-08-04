@@ -10,9 +10,10 @@ One breath at a time.
 - **Session ratings** — each session is rated Good, Okay, or Not great. The
   calendar encodes quality by how much sage fills the circle: solid = good,
   soft fill = okay, outline = not great. Reopen a day to change or remove it.
-- **Weekly goal** — the dashboard leads with sessions this week against your
-  goal (e.g. 3/5) with a progress dot per session; the card glows when the
-  goal is met. Tap the card to set the goal (1–7 sessions per week).
+- **Weekly goal** — sessions this week against your goal (e.g. 3/5); the tile
+  glows when the goal is met. Tap it to set the goal (1–7 sessions per week).
+- **Personal greeting** — a time-aware "Good morning, <name>" header. Each
+  install asks for a name on first open; tap the greeting to change it.
 - **Monthly counts** at a glance — total sessions and Good-rated days for
   the month being viewed.
 - **Local & private** — everything is stored in your browser's `localStorage`.
