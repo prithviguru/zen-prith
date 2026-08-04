@@ -407,18 +407,18 @@
     <footer aria-label="Rating legend">
       <span><i class="dot-sw sw-good"></i>Good</span>
       <span><i class="dot-sw sw-okay"></i>Okay</span>
-      <span><i class="dot-sw sw-rough"></i>Rough</span>
+      <span><i class="dot-sw sw-rough"></i>Not great</span>
     </footer>
   </main>
 
   <div class="backdrop" id="backdrop"></div>
   <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
     <p class="sheet-date" id="sheet-date"></p>
-    <h2 class="sheet-title" id="sheet-title">How was your sit?</h2>
+    <h2 class="sheet-title" id="sheet-title">How was your session today?</h2>
     <div class="opts">
       <button class="opt" data-rating="good"><i class="dot-sw sw-good"></i>Good</button>
       <button class="opt" data-rating="okay"><i class="dot-sw sw-okay"></i>Okay</button>
-      <button class="opt" data-rating="rough"><i class="dot-sw sw-rough"></i>Rough</button>
+      <button class="opt" data-rating="rough"><i class="dot-sw sw-rough"></i>Not great</button>
     </div>
     <button class="sheet-remove" id="sheet-remove">Remove this day</button>
   </div>
@@ -430,6 +430,7 @@
   const MONTHS = ["January","February","March","April","May","June",
                   "July","August","September","October","November","December"];
   const DOWS = ["S","M","T","W","T","F","S"];
+  const LABELS = { good: "good", okay: "okay", rough: "not great" };
 
   const grid = document.getElementById("grid");
   const title = document.getElementById("cal-title");
@@ -524,7 +525,7 @@
         el.disabled = true;
         el.setAttribute("aria-label", `${MONTHS[m]} ${d} — future`);
       } else {
-        el.setAttribute("aria-label", `${MONTHS[m]} ${d} — ${rating ? "meditated, " + rating : "not marked"}`);
+        el.setAttribute("aria-label", `${MONTHS[m]} ${d} — ${rating ? "meditated, " + LABELS[rating] : "not marked"}`);
         el.addEventListener("click", () => openSheet(k, `${MONTHS[m]} ${d}, ${y}`));
       }
       grid.appendChild(el);

@@ -7,9 +7,9 @@ One breath at a time.
 
 - **Calendar view** — tap any past day or today to log a meditation. Future
   days are locked.
-- **Session ratings** — each sit is rated Good, Okay, or Rough. The calendar
-  encodes quality by how much sage fills the circle: solid = good,
-  soft fill = okay, outline = rough. Reopen a day to change or remove it.
+- **Session ratings** — each session is rated Good, Okay, or Not great. The
+  calendar encodes quality by how much sage fills the circle: solid = good,
+  soft fill = okay, outline = not great. Reopen a day to change or remove it.
 - **Streak tracking** — your current consecutive-day streak (it survives until
   the end of today, so a missed morning doesn't break it prematurely).
 - **Monthly & all-time counts** at a glance.
