@@ -7,7 +7,9 @@ One breath at a time.
 
 - **Calendar view** — tap any past day or today to log a meditation. Future
   days are locked.
-- **Session ratings** — each session is rated Good, Okay, or Not great. The
+- **Nothing is required but the day itself.** "Log without rating" marks a
+  day as meditated with no other input; those days show as a neutral circle.
+- **Session ratings** — a session can be rated Good, Okay, or Not great. The
   calendar encodes quality by how much sage fills the circle: solid = good,
   soft fill = okay, outline = not great. Reopen a day to change or remove it.
 - **Session length** — optionally record how long you sat, from the same
