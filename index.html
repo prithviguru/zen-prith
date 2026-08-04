@@ -454,6 +454,25 @@
     color: var(--accent);
   }
 
+  .dur-input {
+    width: 74px;
+    background: var(--surface);
+    border: 1px solid rgba(163, 177, 138, 0.55);
+    border-radius: 999px;
+    padding: 8px 10px;
+    color: var(--accent);
+    font-family: inherit;
+    font-size: 16px; /* 16px keeps iOS from zooming on focus */
+    text-align: center;
+    outline: none;
+    -moz-appearance: textfield;
+  }
+  .dur-input::-webkit-outer-spin-button,
+  .dur-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
   /* ---------- goal sheet ---------- */
   .stepper {
     display: flex;
@@ -635,6 +654,7 @@
   view.setDate(1);
   let sheetKey = null;   // date currently open in the rating sheet
   let selMinutes = null; // length chosen in the sheet, null = not recorded
+  let durExpanded = false; // "More" tapped: show the full set of lengths
   let justRated = null;  // date to pop-animate on next render
 
   function load() {
@@ -781,6 +801,7 @@
     sheetKey = k;
     const e = log[k];
     selMinutes = (e && e.minutes) || null;
+    durExpanded = false;
     document.getElementById("sheet-date").textContent = label;
     document.querySelectorAll(".opt").forEach((b) =>
       b.classList.toggle("selected", b.dataset.rating === (e && e.rating))
@@ -792,16 +813,17 @@
   }
 
   /* ---------- session length ---------- */
-  const DURATIONS = [5, 10, 15, 20, 30, 45];
+  // Three common lengths up front; everything else is a tap away under "More".
+  const DUR_MAIN = [10, 15, 30];
+  const DUR_ALL = [5, 10, 15, 20, 25, 30, 45, 60];
 
   function renderDurs() {
     const row = document.getElementById("dur-row");
     row.innerHTML = "";
-    // A length typed on another device (or a future timer) may not be a preset;
-    // keep it visible rather than silently dropping it.
-    const vals = DURATIONS.includes(selMinutes) || !selMinutes
-      ? DURATIONS
-      : [selMinutes, ...DURATIONS];
+    const base = durExpanded ? DUR_ALL : DUR_MAIN;
+    // A length set elsewhere (or by a future timer) may not be in the shown
+    // set; keep it visible rather than silently dropping it.
+    const vals = !selMinutes || base.includes(selMinutes) ? base : [selMinutes, ...base];
 
     const none = document.createElement("button");
     none.className = "dur" + (selMinutes ? "" : " selected");
@@ -817,6 +839,63 @@
       b.addEventListener("click", () => setDuration(v));
       row.appendChild(b);
     }
+
+    const last = document.createElement("button");
+    last.className = "dur";
+    if (durExpanded) {
+      last.textContent = "+";
+      last.setAttribute("aria-label", "Enter another length in minutes");
+      last.addEventListener("click", () => showCustom(last));
+    } else {
+      last.textContent = "More";
+      last.setAttribute("aria-label", "Show more lengths");
+      last.addEventListener("click", () => {
+        durExpanded = true;
+        renderDurs();
+      });
+    }
+    row.appendChild(last);
+  }
+
+  // The "+" chip becomes a number field in place, so any length can be typed.
+  function showCustom(btn) {
+    const input = document.createElement("input");
+    input.type = "number";
+    input.inputMode = "numeric";
+    input.className = "dur-input";
+    input.min = "1";
+    input.max = "600";
+    input.placeholder = "min";
+    input.setAttribute("aria-label", "Length in minutes");
+
+    // Removing a focused input fires blur, so guard against committing twice
+    // — or committing at all after the field has been cancelled.
+    let settled = false;
+    const commit = () => {
+      if (settled) return;
+      settled = true;
+      const v = Math.round(Number(input.value));
+      if (input.value !== "" && v >= 1 && v <= 600) setDuration(v);
+      else renderDurs();
+    };
+    const cancel = () => {
+      if (settled) return;
+      settled = true;
+      renderDurs();
+    };
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        commit();
+      } else if (e.key === "Escape") {
+        e.stopPropagation(); // don't let Escape close the whole sheet
+        cancel();
+      }
+    });
+    input.addEventListener("blur", commit);
+
+    btn.replaceWith(input);
+    input.focus();
   }
 
   function setDuration(v) {
