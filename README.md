@@ -10,6 +10,8 @@ One breath at a time.
 - **Session ratings** — each session is rated Good, Okay, or Not great. The
   calendar encodes quality by how much sage fills the circle: solid = good,
   soft fill = okay, outline = not great. Reopen a day to change or remove it.
+- **Session length** — optionally record how long you sat, from the same
+  sheet as the rating. Days logged without a length stay valid.
 - **Weekly goal** — sessions this week against your goal (e.g. 3/5); the tile
   glows when the goal is met. Tap it to set the goal (1–7 sessions per week).
 - **Personal greeting** — a time-aware "Good morning, <name>" header. Each

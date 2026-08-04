@@ -416,6 +416,82 @@
   }
   .sheet-remove:hover { color: #c99a8f; }
 
+  /* ---------- session length ---------- */
+  .dur-label {
+    margin: -10px 0 9px;
+    text-align: center;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .dur-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 7px;
+    margin-bottom: 20px;
+  }
+
+  .dur {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 8px 14px;
+    color: var(--text-faint);
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s, background 0.2s, transform 0.15s;
+  }
+  .dur:hover { color: var(--text-dim); border-color: rgba(255, 255, 255, 0.14); }
+  .dur:active { transform: scale(0.94); }
+  .dur.selected {
+    border-color: rgba(163, 177, 138, 0.55);
+    background: rgba(163, 177, 138, 0.1);
+    color: var(--accent);
+  }
+
+  .dur-plus { min-width: 42px; font-size: 15px; line-height: 1; }
+
+  .dur-input {
+    width: 82px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 8px 10px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12px; /* matches the chips */
+    letter-spacing: 0.03em;
+    text-align: center;
+    outline: none;
+    -moz-appearance: textfield;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+  }
+  .dur-input::placeholder {
+    color: var(--text-faint);
+    font-style: italic;
+  }
+  /* iOS zooms the page when a focused field is under 16px, so grow it for
+     the moment it's being typed into — at rest it sits level with the chips. */
+  .dur-input:focus {
+    border-color: rgba(163, 177, 138, 0.5);
+    font-size: 16px;
+  }
+  .dur-input.selected {
+    border-color: rgba(163, 177, 138, 0.55);
+    background: rgba(163, 177, 138, 0.1);
+    color: var(--accent);
+  }
+  .dur-input::-webkit-outer-spin-button,
+  .dur-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
   /* ---------- goal sheet ---------- */
   .stepper {
     display: flex;
@@ -545,6 +621,8 @@
   <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
     <p class="sheet-date" id="sheet-date"></p>
     <h2 class="sheet-title" id="sheet-title">How was your session today?</h2>
+    <p class="dur-label">How long?</p>
+    <div class="dur-row" id="dur-row"></div>
     <div class="opts">
       <button class="opt" data-rating="good"><i class="dot-sw sw-good"></i>Good</button>
       <button class="opt" data-rating="okay"><i class="dot-sw sw-okay"></i>Okay</button>
@@ -594,17 +672,31 @@
   let view = new Date();
   view.setDate(1);
   let sheetKey = null;   // date currently open in the rating sheet
+  let selMinutes = null; // length chosen in the sheet, null = not recorded
+  let durExpanded = false; // "More" tapped: show the full set of lengths
   let justRated = null;  // date to pop-animate on next render
 
   function load() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) return JSON.parse(raw) || {};
+      if (raw) {
+        // v2 stored a bare rating string; v3 stores { rating, minutes }.
+        const parsed = JSON.parse(raw) || {};
+        let changed = false;
+        for (const k in parsed) {
+          if (typeof parsed[k] === "string") {
+            parsed[k] = { rating: parsed[k] };
+            changed = true;
+          }
+        }
+        if (changed) localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        return parsed;
+      }
       // Migrate v1 data: unrated marked days become "okay".
       const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY));
       if (Array.isArray(legacy) && legacy.length) {
         const migrated = {};
-        for (const d of legacy) migrated[d] = "okay";
+        for (const d of legacy) migrated[d] = { rating: "okay" };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
         return migrated;
       }
@@ -673,7 +765,8 @@
     for (let d = 1; d <= total; d++) {
       const el = document.createElement("button");
       const k = key(y, m, d);
-      const rating = log[k];
+      const entry = log[k];
+      const rating = entry && entry.rating;
       const isFuture = new Date(y, m, d) > now;
       el.className = "day";
       el.textContent = d;
@@ -688,7 +781,8 @@
         el.disabled = true;
         el.setAttribute("aria-label", `${MONTHS[m]} ${d} — future`);
       } else {
-        el.setAttribute("aria-label", `${MONTHS[m]} ${d} — ${rating ? "meditated, " + LABELS[rating] : "not marked"}`);
+        const mins = entry && entry.minutes ? `, ${entry.minutes} minutes` : "";
+        el.setAttribute("aria-label", `${MONTHS[m]} ${d} — ${rating ? "meditated, " + LABELS[rating] + mins : "not marked"}`);
         el.addEventListener("click", () => openSheet(k, `${MONTHS[m]} ${d}, ${y}`));
       }
       grid.appendChild(el);
@@ -704,7 +798,7 @@
     for (const k in log) {
       if (!k.startsWith(prefix)) continue;
       monthCount++;
-      if (log[k] === "good") goodCount++;
+      if (log[k].rating === "good") goodCount++;
     }
     document.getElementById("stat-month").textContent = monthCount;
     document.getElementById("stat-good").textContent = goodCount;
@@ -724,13 +818,125 @@
 
   function openSheet(k, label) {
     sheetKey = k;
+    const e = log[k];
+    selMinutes = (e && e.minutes) || null;
+    durExpanded = false;
     document.getElementById("sheet-date").textContent = label;
     document.querySelectorAll(".opt").forEach((b) =>
-      b.classList.toggle("selected", b.dataset.rating === log[k])
+      b.classList.toggle("selected", b.dataset.rating === (e && e.rating))
     );
-    removeBtn.style.display = log[k] ? "block" : "none";
+    renderDurs();
+    removeBtn.style.display = e ? "block" : "none";
     backdrop.classList.add("open");
     sheet.classList.add("open");
+  }
+
+  /* ---------- session length ---------- */
+  // Three common lengths up front; everything else is a tap away under "More".
+  const DUR_MAIN = [10, 15, 30];
+  const DUR_ALL = [5, 10, 15, 20, 25, 30, 45, 60];
+
+  function renderDurs() {
+    const row = document.getElementById("dur-row");
+    row.innerHTML = "";
+    const base = durExpanded ? DUR_ALL : DUR_MAIN;
+    // A length set elsewhere (or by a future timer) may not be in the shown
+    // set; keep it visible rather than silently dropping it.
+    const vals = !selMinutes || base.includes(selMinutes) ? base : [selMinutes, ...base];
+
+    row.appendChild(durChip("—", null, "No length recorded"));
+    for (const v of vals) row.appendChild(durChip(`${v} min`, v));
+
+    if (durExpanded) {
+      row.appendChild(durInput());
+    } else {
+      const plus = document.createElement("button");
+      plus.className = "dur dur-plus";
+      plus.textContent = "+";
+      plus.setAttribute("aria-label", "More lengths");
+      plus.addEventListener("click", () => {
+        durExpanded = true;
+        renderDurs();
+      });
+      row.appendChild(plus);
+    }
+    markDurSelection();
+  }
+
+  function durChip(label, v, aria) {
+    const b = document.createElement("button");
+    b.className = "dur";
+    b.textContent = label;
+    if (v == null) b.dataset.none = "1";
+    else b.dataset.min = v;
+    if (aria) b.setAttribute("aria-label", aria);
+    b.addEventListener("click", () => setDuration(v));
+    return b;
+  }
+
+  // Typing a length lives in the expanded row rather than behind another tap.
+  function durInput() {
+    const input = document.createElement("input");
+    input.type = "number";
+    input.inputMode = "numeric";
+    input.className = "dur-input";
+    input.min = "1";
+    input.max = "600";
+    input.placeholder = "Custom";
+    input.setAttribute("aria-label", "Length in minutes");
+    if (selMinutes && !DUR_ALL.includes(selMinutes)) input.value = selMinutes;
+
+    // "change" fires once, on Enter or on blur — no double-commit to guard.
+    input.addEventListener("change", () => {
+      if (input.value === "") return;
+      const v = Math.round(Number(input.value));
+      if (v >= 1 && v <= 600) setDuration(v);
+      else input.value = selMinutes && !DUR_ALL.includes(selMinutes) ? selMinutes : "";
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        input.blur();
+      } else if (e.key === "Escape") {
+        e.stopPropagation(); // don't let Escape close the whole sheet
+        input.value = "";
+        input.blur();
+      }
+    });
+    return input;
+  }
+
+  // Repaint selection in place. Rebuilding the row here would tear down the
+  // element a tap is landing on — a rating tapped straight after typing a
+  // length would be swallowed.
+  function markDurSelection() {
+    const row = document.getElementById("dur-row");
+    let onChip = false;
+    row.querySelectorAll(".dur").forEach((el) => {
+      const v = el.dataset.min ? Number(el.dataset.min) : null;
+      const on = el.dataset.none ? !selMinutes : v === selMinutes;
+      el.classList.toggle("selected", !!on);
+      if (on && v) onChip = true;
+    });
+    const input = row.querySelector(".dur-input");
+    if (input) {
+      input.classList.toggle("selected", !!selMinutes && !onChip);
+      if (onChip) input.value = "";
+    }
+  }
+
+  function setDuration(v) {
+    selMinutes = v;
+    markDurSelection();
+    // If the day is already logged, changing the length saves on the spot —
+    // no need to re-pick a rating just to adjust the minutes.
+    const e = log[sheetKey];
+    if (e) {
+      if (v) e.minutes = v;
+      else delete e.minutes;
+      save();
+      render();
+    }
   }
 
   function closeSheet() {
@@ -744,7 +950,8 @@
   document.querySelectorAll(".opt").forEach((b) =>
     b.addEventListener("click", () => {
       if (!sheetKey) return;
-      log[sheetKey] = b.dataset.rating;
+      log[sheetKey] = { rating: b.dataset.rating };
+      if (selMinutes) log[sheetKey].minutes = selMinutes;
       justRated = sheetKey;
       save();
       closeSheet();
