@@ -206,8 +206,38 @@
   .begin:hover { background: rgba(163, 177, 138, 0.2); }
   .begin:active { transform: scale(0.985); }
 
-  /* ---------- timer length picker ---------- */
+  /* ---------- timer / stopwatch picker ---------- */
+  .mode-label {
+    margin: -6px 0 9px;
+    text-align: center;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+  .mode-label + .lens { margin-bottom: 18px; }
+
   .lens { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+  .stopwatch {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    width: 100%;
+    padding: 15px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, background 0.2s, transform 0.15s;
+  }
+  .stopwatch:hover { color: var(--text); border-color: rgba(255, 255, 255, 0.16); }
+  .stopwatch:active { transform: scale(0.98); }
 
   .len {
     display: flex;
@@ -812,16 +842,22 @@
   </div>
 
   <div class="sheet" id="timer-sheet" role="dialog" aria-modal="true" aria-labelledby="timer-title">
-    <p class="sheet-date">Timer</p>
-    <h2 class="sheet-title" id="timer-title">How long will you sit?</h2>
+    <p class="sheet-date">Begin</p>
+    <h2 class="sheet-title" id="timer-title">How would you like to sit?</h2>
+    <p class="mode-label">Timer &mdash; count down</p>
     <div class="lens">
       <button class="len" data-min="5"><b>5</b>min</button>
       <button class="len" data-min="10"><b>10</b>min</button>
       <button class="len" data-min="15"><b>15</b>min</button>
       <button class="len" data-min="20"><b>20</b>min</button>
       <button class="len" data-min="30"><b>30</b>min</button>
-      <button class="len" data-min="0"><b>&infin;</b>open</button>
+      <button class="len" data-min="45"><b>45</b>min</button>
     </div>
+    <p class="mode-label">Stopwatch &mdash; count up</p>
+    <button class="stopwatch" id="stopwatch-btn">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 1h6"/></svg>
+      Sit for as long as you like
+    </button>
   </div>
 
   <div class="timer-view" id="timer-view" role="dialog" aria-modal="true" aria-label="Meditation timer">
@@ -1295,7 +1331,7 @@
 
   function openTimerView(targetMin) {
     document.getElementById("timer-mode").textContent =
-      targetMin > 0 ? `${targetMin} minute sit` : "Open sit";
+      targetMin > 0 ? `${targetMin} minute sit` : "Stopwatch";
     ringFg.classList.toggle("hidden", targetMin === 0);
     ringFg.style.strokeDashoffset = RING;
     timerView.classList.add("open");
@@ -1397,6 +1433,9 @@
   document.querySelectorAll(".len").forEach((b) =>
     b.addEventListener("click", () => startTimer(Number(b.dataset.min)))
   );
+
+  // Stopwatch is the same machinery with no target: it counts up until ended.
+  document.getElementById("stopwatch-btn").addEventListener("click", () => startTimer(0));
 
   document.getElementById("timer-end").addEventListener("click", () => finishTimer(false));
 
