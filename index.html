@@ -537,8 +537,19 @@
     padding: 22px 20px calc(18px + env(safe-area-inset-bottom));
     transition: transform 0.3s cubic-bezier(0.32, 0.72, 0.35, 1);
     z-index: 11;
+    touch-action: pan-y;
   }
   .sheet.open { transform: translate(-50%, 0); }
+  /* While a finger is on it, follow the drag exactly — no easing. */
+  .sheet.dragging { transition: none; }
+
+  .sheet-handle {
+    width: 36px;
+    height: 4px;
+    margin: -8px auto 14px;
+    border-radius: 2px;
+    background: rgba(232, 228, 220, 0.18);
+  }
 
   .sheet-date {
     text-align: center;
@@ -560,6 +571,7 @@
 
   .opt {
     flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -600,7 +612,6 @@
     transition: color 0.2s;
   }
   .sheet-remove:hover { color: #c99a8f; }
-  .sheet-log:hover { color: var(--accent); }
 
   /* ---------- session length ---------- */
   .dur-label {
@@ -817,6 +828,7 @@
 
   <div class="backdrop" id="backdrop"></div>
   <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <div class="sheet-handle" aria-hidden="true"></div>
     <p class="sheet-date" id="sheet-date"></p>
     <h2 class="sheet-title" id="sheet-title">How was your session today?</h2>
     <p class="dur-label">How long?</p>
@@ -826,11 +838,12 @@
       <button class="opt" data-rating="okay"><i class="dot-sw sw-okay"></i>Okay</button>
       <button class="opt" data-rating="rough"><i class="dot-sw sw-rough"></i>Not great</button>
     </div>
-    <button class="sheet-remove sheet-log" id="sheet-log">Log without rating</button>
+    <button class="goal-done" id="sheet-save">Save</button>
     <button class="sheet-remove" id="sheet-remove">Remove this day</button>
   </div>
 
   <div class="sheet" id="goal-sheet" role="dialog" aria-modal="true" aria-labelledby="goal-title">
+    <div class="sheet-handle" aria-hidden="true"></div>
     <p class="sheet-date">Weekly goal</p>
     <h2 class="sheet-title" id="goal-title">Sessions per week</h2>
     <div class="stepper">
@@ -842,6 +855,7 @@
   </div>
 
   <div class="sheet" id="timer-sheet" role="dialog" aria-modal="true" aria-labelledby="timer-title">
+    <div class="sheet-handle" aria-hidden="true"></div>
     <p class="sheet-date">Begin</p>
     <h2 class="sheet-title" id="timer-title">How would you like to sit?</h2>
     <p class="mode-label">Timer &mdash; count down</p>
@@ -876,6 +890,7 @@
   </div>
 
   <div class="sheet" id="name-sheet" role="dialog" aria-modal="true" aria-labelledby="name-title">
+    <div class="sheet-handle" aria-hidden="true"></div>
     <p class="sheet-date" id="name-kicker">Welcome</p>
     <h2 class="sheet-title" id="name-title">What should we call you?</h2>
     <input class="name-input" id="name-input" type="text" maxlength="24"
@@ -907,6 +922,7 @@
   view.setDate(1);
   let sheetKey = null;   // date currently open in the rating sheet
   let selMinutes = null; // length chosen in the sheet, null = not recorded
+  let selRating = null;  // rating chosen in the sheet, null = none
   let durExpanded = false; // "More" tapped: show the full set of lengths
   let justRated = null;  // date to pop-animate on next render
 
@@ -1050,7 +1066,6 @@
   const sheet = document.getElementById("sheet");
   const backdrop = document.getElementById("backdrop");
   const removeBtn = document.getElementById("sheet-remove");
-  const logBtn = document.getElementById("sheet-log");
 
   function openSheet(k, label, presetMinutes) {
     sheetKey = k;
@@ -1058,12 +1073,10 @@
     selMinutes = presetMinutes != null ? presetMinutes : (e && e.minutes) || null;
     durExpanded = false;
     document.getElementById("sheet-date").textContent = label;
-    document.querySelectorAll(".opt").forEach((b) =>
-      b.classList.toggle("selected", b.dataset.rating === (e && e.rating))
-    );
+    selRating = (e && e.rating) || null;
+    markOptSelection();
     renderDurs();
     removeBtn.style.display = e ? "block" : "none";
-    logBtn.style.display = e ? "none" : "block";
     backdrop.classList.add("open");
     sheet.classList.add("open");
   }
@@ -1081,7 +1094,6 @@
     // set; keep it visible rather than silently dropping it.
     const vals = !selMinutes || base.includes(selMinutes) ? base : [selMinutes, ...base];
 
-    row.appendChild(durChip("—", null, "No length recorded"));
     for (const v of vals) row.appendChild(durChip(`${v} min`, v));
 
     if (durExpanded) {
@@ -1100,14 +1112,13 @@
     markDurSelection();
   }
 
-  function durChip(label, v, aria) {
+  function durChip(label, v) {
     const b = document.createElement("button");
     b.className = "dur";
     b.textContent = label;
-    if (v == null) b.dataset.none = "1";
-    else b.dataset.min = v;
-    if (aria) b.setAttribute("aria-label", aria);
-    b.addEventListener("click", () => setDuration(v));
+    b.dataset.min = v;
+    // Tapping the chosen length again clears it — no separate "none" chip.
+    b.addEventListener("click", () => setDuration(v === selMinutes ? null : v));
     return b;
   }
 
@@ -1151,9 +1162,9 @@
     let onChip = false;
     row.querySelectorAll(".dur").forEach((el) => {
       const v = el.dataset.min ? Number(el.dataset.min) : null;
-      const on = el.dataset.none ? !selMinutes : v === selMinutes;
-      el.classList.toggle("selected", !!on);
-      if (on && v) onChip = true;
+      const on = v !== null && v === selMinutes;
+      el.classList.toggle("selected", on);
+      if (on) onChip = true;
     });
     const input = row.querySelector(".dur-input");
     if (input) {
@@ -1165,15 +1176,6 @@
   function setDuration(v) {
     selMinutes = v;
     markDurSelection();
-    // If the day is already logged, changing the length saves on the spot —
-    // no need to re-pick a rating just to adjust the minutes.
-    const e = log[sheetKey];
-    if (e) {
-      if (v) e.minutes = v;
-      else delete e.minutes;
-      save();
-      render();
-    }
   }
 
   function closeSheet() {
@@ -1185,28 +1187,27 @@
     timerSheet.classList.remove("open");
   }
 
+  function markOptSelection() {
+    document.querySelectorAll(".opt").forEach((b) =>
+      b.classList.toggle("selected", b.dataset.rating === selRating)
+    );
+  }
+
+  // Nothing in the sheet commits on its own — the rating and the length are
+  // both just selections until Save, and dismissing throws them away.
   document.querySelectorAll(".opt").forEach((b) =>
     b.addEventListener("click", () => {
-      if (!sheetKey) return;
-      const e = log[sheetKey] || {};
-      // Tapping the rating already set clears it, leaving the day logged but
-      // unrated — the only way back to "logged, no opinion".
-      if (e.rating === b.dataset.rating) delete e.rating;
-      else e.rating = b.dataset.rating;
-      if (selMinutes) e.minutes = selMinutes;
-      else delete e.minutes;
-      log[sheetKey] = e;
-      justRated = sheetKey;
-      save();
-      closeSheet();
-      render();
+      selRating = selRating === b.dataset.rating ? null : b.dataset.rating;
+      markOptSelection();
     })
   );
 
-  // A day counts as meditated on its own; the rating and length are extras.
-  logBtn.addEventListener("click", () => {
+  // Saving with nothing chosen still logs the day: a session counts on its
+  // own, with or without an opinion about how it went.
+  document.getElementById("sheet-save").addEventListener("click", () => {
     if (!sheetKey) return;
     const e = {};
+    if (selRating) e.rating = selRating;
     if (selMinutes) e.minutes = selMinutes;
     log[sheetKey] = e;
     justRated = sheetKey;
@@ -1226,6 +1227,40 @@
   backdrop.addEventListener("click", closeSheet);
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeSheet();
+  });
+
+  /* ---------- swipe a sheet down to dismiss ---------- */
+  // Dismissing never saves: whatever was tapped in the sheet has already been
+  // committed, and anything not yet committed is meant to be abandoned.
+  document.querySelectorAll(".sheet").forEach((el) => {
+    let startY = 0;
+    let dy = 0;
+    let dragging = false;
+
+    el.addEventListener("touchstart", (e) => {
+      // Don't hijack a drag that starts on the number field.
+      if (e.target.closest("input")) return;
+      startY = e.touches[0].clientY;
+      dy = 0;
+      dragging = true;
+      el.classList.add("dragging");
+    }, { passive: true });
+
+    el.addEventListener("touchmove", (e) => {
+      if (!dragging) return;
+      dy = Math.max(0, e.touches[0].clientY - startY); // downward only
+      el.style.transform = `translate(-50%, ${dy}px)`;
+    }, { passive: true });
+
+    const end = () => {
+      if (!dragging) return;
+      dragging = false;
+      el.classList.remove("dragging");
+      el.style.transform = "";
+      if (dy > 70) closeSheet();
+    };
+    el.addEventListener("touchend", end);
+    el.addEventListener("touchcancel", end);
   });
 
   /* ---------- weekly goal sheet ---------- */
