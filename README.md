@@ -15,6 +15,11 @@ One breath at a time.
   day to change the rating, clear it, or remove the day.
 - **Session length** — optionally record how long you sat, from the same
   sheet as the rating. Days logged without a length stay valid.
+- **Built-in timer** — "Begin session" runs a countdown (5–30 min) or an
+  open-ended sit, keeps the screen awake, chimes when a countdown ends, and
+  opens the rating sheet with the length already filled in. Elapsed time is
+  derived from the clock and the start is saved, so locking the phone or
+  closing the app mid-sit doesn't lose the session.
 - **Weekly goal** — sessions this week against your goal (e.g. 3/5); the tile
   glows when the goal is met. Tap it to set the goal (1–7 sessions per week).
 - **Personal greeting** — a time-aware "Good morning, <name>" header. Each
