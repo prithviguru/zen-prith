@@ -272,44 +272,34 @@
   .day.future:hover { background: transparent; }
   .day.future:active { transform: none; }
 
-  .day.today::after {
+  /* Today is marked by its number, not a dot — the dot slot belongs to the
+     rating now. */
+  .day.today { color: var(--accent); }
+
+  /* Every logged day is the same quiet ring; the rating is a small coloured
+     dot inside it, so the calendar stays calm at a glance. */
+  .day.done {
+    font-weight: 500;
+    box-shadow: inset 0 0 0 1.5px rgba(232, 228, 220, 0.22);
+  }
+  .day.done:hover { background: rgba(232, 228, 220, 0.07); }
+
+  .day.r-good::after,
+  .day.r-okay::after,
+  .day.r-rough::after {
     content: "";
     position: absolute;
     left: 50%;
     bottom: 5px;
     transform: translateX(-50%);
-    width: 4px;
-    height: 4px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
-    background: var(--text-dim);
   }
 
-  /* Rating visual language: an empty circle means the day is logged; a
-     colour fills it in to say how the sit went. */
-  .day.done { font-weight: 500; }
-
-  .day.r-none {
-    color: var(--text);
-    box-shadow: inset 0 0 0 1.5px rgba(232, 228, 220, 0.25);
-  }
-  .day.r-none:hover { background: rgba(232, 228, 220, 0.07); }
-
-  /* Pale tints at high opacity. Low alpha over a near-black card composites
-     darker, not lighter, so "light and translucent" has to come from a pale
-     colour rather than a see-through one. */
-  .day.r-good,
-  .day.r-okay,
-  .day.r-rough { color: #1a1d16; }
-
-  .day.r-good  { background: rgba(206, 217, 186, 0.72); }
-  .day.r-okay  { background: rgba(231, 214, 178, 0.72); }
-  .day.r-rough { background: rgba(226, 184, 175, 0.7); }
-
-  .day.r-good:hover  { background: rgba(206, 217, 186, 0.88); }
-  .day.r-okay:hover  { background: rgba(231, 214, 178, 0.88); }
-  .day.r-rough:hover { background: rgba(226, 184, 175, 0.86); }
-
-  .day.done.today::after { background: currentColor; }
+  .day.r-good::after  { background: var(--r-good); }
+  .day.r-okay::after  { background: var(--r-okay); }
+  .day.r-rough::after { background: var(--r-rough); }
 
   .day.pop { animation: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
 
@@ -320,16 +310,30 @@
   }
 
   /* ---------- rating sheet ---------- */
+  /* A ring with the rating dot inside, echoing the calendar exactly. */
   .dot-sw {
+    position: relative;
     display: block;
     width: 26px;
     height: 26px;
     border-radius: 50%;
+    box-shadow: inset 0 0 0 1.5px rgba(232, 228, 220, 0.22);
+  }
+  .dot-sw::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
   }
   /* Same wash as the calendar circles, so legend and days always agree. */
-  .sw-good  { background: rgba(206, 217, 186, 0.72); }
-  .sw-okay  { background: rgba(231, 214, 178, 0.72); }
-  .sw-rough { background: rgba(226, 184, 175, 0.7); }
+  .sw-good  { color: var(--r-good); }
+  .sw-okay  { color: var(--r-okay); }
+  .sw-rough { color: var(--r-rough); }
 
   .backdrop {
     position: fixed;
@@ -583,7 +587,14 @@
   }
 
   footer span { display: inline-flex; align-items: center; gap: 7px; }
-  footer .dot-sw { width: 11px; height: 11px; }
+  /* In the legend the ring would be noise at this size — show just the dot. */
+  footer .dot-sw {
+    width: 8px;
+    height: 8px;
+    box-shadow: none;
+    background: currentColor;
+  }
+  footer .dot-sw::after { display: none; }
 
   @media (max-width: 380px) {
     .stat b { font-size: 26px; }
