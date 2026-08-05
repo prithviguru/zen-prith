@@ -2,11 +2,12 @@
 // cache-first with a background refresh (stale-while-revalidate), so the
 // app opens instantly and works fully offline once visited.
 
-const CACHE = "zen-v13";
+const CACHE = "zen-v15";
 const SHELL = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
+  "./bell.wav",
   "./icon-192.png",
   "./icon-512.png",
   "./apple-touch-icon.png",
