@@ -26,6 +26,11 @@
     --accent: #a3b18a;
     --accent-soft: rgba(163, 177, 138, 0.14);
     --accent-glow: rgba(163, 177, 138, 0.35);
+    /* Rating palette: separated enough to read at dot size — green, amber,
+       terracotta — while staying muted against the dark page. */
+    --r-good: #9ec27b;
+    --r-okay: #e0b544;
+    --r-rough: #d1675a;
     --radius: 20px;
   }
 
@@ -268,52 +273,34 @@
   .day.future:hover { background: transparent; }
   .day.future:active { transform: none; }
 
-  .day.today::after {
+  /* Today is marked by its number, not a dot — the dot slot belongs to the
+     rating now. */
+  .day.today { color: var(--accent); }
+
+  /* Every logged day is the same quiet ring; the rating is a small coloured
+     dot inside it, so the calendar stays calm at a glance. */
+  .day.done {
+    font-weight: 500;
+    box-shadow: inset 0 0 0 1.5px rgba(232, 228, 220, 0.22);
+  }
+  .day.done:hover { background: rgba(232, 228, 220, 0.07); }
+
+  .day.r-good::after,
+  .day.r-okay::after,
+  .day.r-rough::after {
     content: "";
     position: absolute;
     left: 50%;
-    bottom: 5px;
+    bottom: 4.5px;
     transform: translateX(-50%);
-    width: 4px;
-    height: 4px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
-    background: var(--text-dim);
   }
 
-  /* Rating visual language: how much sage fills the circle = how the sit went.
-     good = solid, okay = soft fill, rough = outline only. */
-  .day.done { font-weight: 500; }
-
-  .day.r-good {
-    background: var(--accent);
-    color: #11150d;
-    box-shadow: 0 0 12px rgba(163, 177, 138, 0.3);
-  }
-  .day.r-good:hover { background: #b3c09c; }
-
-  .day.r-okay {
-    background: var(--accent-soft);
-    color: var(--accent);
-    box-shadow: inset 0 0 0 1px rgba(163, 177, 138, 0.35);
-  }
-  .day.r-okay:hover { background: rgba(163, 177, 138, 0.22); }
-
-  .day.r-rough {
-    color: rgba(163, 177, 138, 0.8);
-    box-shadow: inset 0 0 0 1.5px rgba(163, 177, 138, 0.4);
-  }
-  .day.r-rough:hover { background: var(--surface-2); }
-
-  /* Logged, but not rated — neutral rather than sage, so it reads as
-     "counted" without implying anything about how the sit went. */
-  .day.r-none {
-    background: rgba(232, 228, 220, 0.07);
-    color: var(--text);
-    box-shadow: inset 0 0 0 1px rgba(232, 228, 220, 0.16);
-  }
-  .day.r-none:hover { background: rgba(232, 228, 220, 0.12); }
-
-  .day.done.today::after { background: currentColor; }
+  .day.r-good::after  { background: var(--r-good); }
+  .day.r-okay::after  { background: var(--r-okay); }
+  .day.r-rough::after { background: var(--r-rough); }
 
   .day.pop { animation: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
 
@@ -324,16 +311,30 @@
   }
 
   /* ---------- rating sheet ---------- */
+  /* A ring with the rating dot inside, echoing the calendar exactly. */
   .dot-sw {
+    position: relative;
     display: block;
     width: 26px;
     height: 26px;
     border-radius: 50%;
+    box-shadow: inset 0 0 0 1.5px rgba(232, 228, 220, 0.22);
   }
-  .sw-good { background: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
-  .sw-okay { background: var(--accent-soft); box-shadow: inset 0 0 0 1.5px rgba(163, 177, 138, 0.45); }
-  .sw-rough { background: transparent; box-shadow: inset 0 0 0 1.5px rgba(163, 177, 138, 0.45); }
-  .sw-none { background: rgba(232, 228, 220, 0.1); box-shadow: inset 0 0 0 1px rgba(232, 228, 220, 0.28); }
+  .dot-sw::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  /* Same wash as the calendar circles, so legend and days always agree. */
+  .sw-good  { color: var(--r-good); }
+  .sw-okay  { color: var(--r-okay); }
+  .sw-rough { color: var(--r-rough); }
 
   .backdrop {
     position: fixed;
@@ -587,8 +588,14 @@
   }
 
   footer span { display: inline-flex; align-items: center; gap: 7px; }
-  footer .dot-sw { width: 12px; height: 12px; }
-  footer .sw-good { box-shadow: none; }
+  /* In the legend the ring would be noise at this size — show just the dot. */
+  footer .dot-sw {
+    width: 8px;
+    height: 8px;
+    box-shadow: none;
+    background: currentColor;
+  }
+  footer .dot-sw::after { display: none; }
 
   @media (max-width: 380px) {
     .stat b { font-size: 26px; }
@@ -623,7 +630,6 @@
     </section>
 
     <footer aria-label="Rating legend">
-      <span><i class="dot-sw sw-none"></i>Logged</span>
       <span><i class="dot-sw sw-good"></i>Good</span>
       <span><i class="dot-sw sw-okay"></i>Okay</span>
       <span><i class="dot-sw sw-rough"></i>Not great</span>
