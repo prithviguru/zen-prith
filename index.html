@@ -294,20 +294,20 @@
   }
   .day.r-none:hover { background: rgba(232, 228, 220, 0.07); }
 
+  /* Pale tints at high opacity. Low alpha over a near-black card composites
+     darker, not lighter, so "light and translucent" has to come from a pale
+     colour rather than a see-through one. */
   .day.r-good,
   .day.r-okay,
-  .day.r-rough {
-    color: #12140f;
-    text-shadow: 0 0 1px rgba(255, 255, 255, 0.25);
-  }
+  .day.r-rough { color: #1a1d16; }
 
-  .day.r-good  { background: var(--r-good);  box-shadow: 0 0 12px rgba(163, 177, 138, 0.28); }
-  .day.r-okay  { background: var(--r-okay);  box-shadow: 0 0 12px rgba(201, 177, 132, 0.24); }
-  .day.r-rough { background: var(--r-rough); box-shadow: 0 0 12px rgba(189, 141, 130, 0.22); }
+  .day.r-good  { background: rgba(206, 217, 186, 0.72); }
+  .day.r-okay  { background: rgba(231, 214, 178, 0.72); }
+  .day.r-rough { background: rgba(226, 184, 175, 0.7); }
 
-  .day.r-good:hover  { background: #b1bd9b; }
-  .day.r-okay:hover  { background: #d4bf97; }
-  .day.r-rough:hover { background: #c89e94; }
+  .day.r-good:hover  { background: rgba(206, 217, 186, 0.88); }
+  .day.r-okay:hover  { background: rgba(231, 214, 178, 0.88); }
+  .day.r-rough:hover { background: rgba(226, 184, 175, 0.86); }
 
   .day.done.today::after { background: currentColor; }
 
@@ -326,9 +326,10 @@
     height: 26px;
     border-radius: 50%;
   }
-  .sw-good { background: var(--r-good); }
-  .sw-okay { background: var(--r-okay); }
-  .sw-rough { background: var(--r-rough); }
+  /* Same wash as the calendar circles, so legend and days always agree. */
+  .sw-good  { background: rgba(206, 217, 186, 0.72); }
+  .sw-okay  { background: rgba(231, 214, 178, 0.72); }
+  .sw-rough { background: rgba(226, 184, 175, 0.7); }
 
   .backdrop {
     position: fixed;
