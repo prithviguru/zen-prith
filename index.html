@@ -183,6 +183,150 @@
     color: var(--text-dim);
   }
 
+  /* ---------- begin session ---------- */
+  .begin {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    width: 100%;
+    padding: 15px;
+    background: var(--accent-soft);
+    border: 1px solid rgba(163, 177, 138, 0.28);
+    border-radius: var(--radius);
+    color: var(--accent);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+  }
+  .begin:hover { background: rgba(163, 177, 138, 0.2); }
+  .begin:active { transform: scale(0.985); }
+
+  /* ---------- timer length picker ---------- */
+  .lens { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+  .len {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 14px 6px 11px;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s, background 0.2s, transform 0.15s;
+  }
+  .len b {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 26px;
+    font-weight: 500;
+    line-height: 1;
+    color: var(--accent);
+  }
+  .len:hover { color: var(--text); border-color: rgba(255, 255, 255, 0.16); }
+  .len:active { transform: scale(0.96); }
+
+  /* ---------- running timer ---------- */
+  .timer-view {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 46px;
+    padding: 40px 24px calc(40px + env(safe-area-inset-bottom));
+    background: var(--bg);
+    background-image: radial-gradient(ellipse 70% 45% at 50% 40%, rgba(163, 177, 138, 0.1), transparent);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s;
+  }
+  .timer-view.open { opacity: 1; pointer-events: auto; }
+
+  .timer-stage {
+    position: relative;
+    width: 240px;
+    height: 240px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ring { position: absolute; inset: 0; transform: rotate(-90deg); }
+  .ring-bg, .ring-fg { fill: none; stroke-width: 2; }
+  .ring-bg { stroke: rgba(255, 255, 255, 0.07); }
+  .ring-fg {
+    stroke: var(--accent);
+    stroke-linecap: round;
+    stroke-dasharray: 691.15;
+    stroke-dashoffset: 691.15;
+    opacity: 0.75;
+    transition: stroke-dashoffset 0.3s linear;
+  }
+  .ring-fg.hidden { display: none; }
+
+  .timer-orb {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 45%, rgba(163, 177, 138, 0.2), rgba(163, 177, 138, 0.03) 70%);
+    animation: breathe 6s ease-in-out infinite;
+  }
+
+  .timer-readout {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .timer-time {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 52px;
+    font-weight: 500;
+    line-height: 1;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .timer-mode {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .timer-end {
+    padding: 13px 34px;
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .timer-end:hover { color: var(--text); border-color: rgba(255, 255, 255, 0.2); }
+
   /* ---------- calendar ---------- */
   .calendar {
     background: var(--surface);
@@ -620,6 +764,11 @@
       <div class="stat"><b id="stat-good">0</b><span>Good days</span></div>
     </section>
 
+    <button class="begin" id="begin-btn">
+      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+      Begin session
+    </button>
+
     <section class="calendar" aria-label="Calendar">
       <div class="cal-head">
         <button class="nav-btn" id="prev" aria-label="Previous month">&#8249;</button>
@@ -662,6 +811,34 @@
     <button class="goal-done" id="goal-done">Done</button>
   </div>
 
+  <div class="sheet" id="timer-sheet" role="dialog" aria-modal="true" aria-labelledby="timer-title">
+    <p class="sheet-date">Timer</p>
+    <h2 class="sheet-title" id="timer-title">How long will you sit?</h2>
+    <div class="lens">
+      <button class="len" data-min="5"><b>5</b>min</button>
+      <button class="len" data-min="10"><b>10</b>min</button>
+      <button class="len" data-min="15"><b>15</b>min</button>
+      <button class="len" data-min="20"><b>20</b>min</button>
+      <button class="len" data-min="30"><b>30</b>min</button>
+      <button class="len" data-min="0"><b>&infin;</b>open</button>
+    </div>
+  </div>
+
+  <div class="timer-view" id="timer-view" role="dialog" aria-modal="true" aria-label="Meditation timer">
+    <div class="timer-stage">
+      <svg class="ring" viewBox="0 0 240 240" aria-hidden="true">
+        <circle class="ring-bg" cx="120" cy="120" r="110" />
+        <circle class="ring-fg" id="ring-fg" cx="120" cy="120" r="110" />
+      </svg>
+      <div class="timer-orb" aria-hidden="true"></div>
+      <div class="timer-readout">
+        <span class="timer-time" id="timer-time">0:00</span>
+        <span class="timer-mode" id="timer-mode"></span>
+      </div>
+    </div>
+    <button class="timer-end" id="timer-end">End session</button>
+  </div>
+
   <div class="sheet" id="name-sheet" role="dialog" aria-modal="true" aria-labelledby="name-title">
     <p class="sheet-date" id="name-kicker">Welcome</p>
     <h2 class="sheet-title" id="name-title">What should we call you?</h2>
@@ -677,6 +854,7 @@
   const LEGACY_KEY = "zen-meditation-days";
   const GOAL_KEY = "zen-weekly-goal";
   const NAME_KEY = "zen-name";
+  const TIMER_KEY = "zen-timer";
   const MONTHS = ["January","February","March","April","May","June",
                   "July","August","September","October","November","December"];
   const DOWS = ["S","M","T","W","T","F","S"];
@@ -838,10 +1016,10 @@
   const removeBtn = document.getElementById("sheet-remove");
   const logBtn = document.getElementById("sheet-log");
 
-  function openSheet(k, label) {
+  function openSheet(k, label, presetMinutes) {
     sheetKey = k;
     const e = log[k];
-    selMinutes = (e && e.minutes) || null;
+    selMinutes = presetMinutes != null ? presetMinutes : (e && e.minutes) || null;
     durExpanded = false;
     document.getElementById("sheet-date").textContent = label;
     document.querySelectorAll(".opt").forEach((b) =>
@@ -968,6 +1146,7 @@
     sheet.classList.remove("open");
     goalSheet.classList.remove("open");
     nameSheet.classList.remove("open");
+    timerSheet.classList.remove("open");
   }
 
   document.querySelectorAll(".opt").forEach((b) =>
@@ -1074,6 +1253,161 @@
     if (e.key === "Enter") saveName();
   });
 
+  /* ---------- timer ---------- */
+  const timerSheet = document.getElementById("timer-sheet");
+  const timerView = document.getElementById("timer-view");
+  const timerTime = document.getElementById("timer-time");
+  const ringFg = document.getElementById("ring-fg");
+  const RING = 691.15; // circumference of the r=110 progress ring
+  const MAX_RUN_MS = 6 * 3600 * 1000; // older than this is an abandoned session
+
+  let timer = null;   // { startedAt, targetMin } — targetMin 0 means open-ended
+  let tickId = null;
+  let wakeLock = null;
+  let audioCtx = null;
+
+  function fmt(ms) {
+    const total = Math.max(0, Math.round(ms / 1000));
+    return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+  }
+
+  function tick() {
+    if (!timer) return;
+    // Elapsed comes from the clock, never from counting intervals — a phone
+    // that slept or a throttled background tab would lose time otherwise.
+    const elapsed = Date.now() - timer.startedAt;
+    if (timer.targetMin > 0) {
+      const total = timer.targetMin * 60000;
+      const left = Math.max(0, total - elapsed);
+      timerTime.textContent = fmt(left);
+      ringFg.style.strokeDashoffset = RING * (left / total);
+      if (left <= 0) finishTimer(true);
+    } else {
+      timerTime.textContent = fmt(elapsed);
+    }
+  }
+
+  function startTicking() {
+    tick();
+    clearInterval(tickId);
+    tickId = setInterval(tick, 250);
+  }
+
+  function openTimerView(targetMin) {
+    document.getElementById("timer-mode").textContent =
+      targetMin > 0 ? `${targetMin} minute sit` : "Open sit";
+    ringFg.classList.toggle("hidden", targetMin === 0);
+    ringFg.style.strokeDashoffset = RING;
+    timerView.classList.add("open");
+  }
+
+  function startTimer(targetMin) {
+    timer = { startedAt: Date.now(), targetMin };
+    localStorage.setItem(TIMER_KEY, JSON.stringify(timer));
+    closeSheet();
+    openTimerView(targetMin);
+    primeAudio(); // must happen inside the tap that started the timer
+    requestWakeLock();
+    startTicking();
+  }
+
+  function finishTimer(completed) {
+    if (!timer) return;
+    clearInterval(tickId);
+    tickId = null;
+    const elapsed = Date.now() - timer.startedAt;
+    // A countdown that ran out is worth its target; anything ended early is
+    // worth the time actually sat, and at least a minute.
+    const minutes = completed && timer.targetMin > 0
+      ? timer.targetMin
+      : Math.max(1, Math.round(elapsed / 60000));
+    timer = null;
+    localStorage.removeItem(TIMER_KEY);
+    releaseWakeLock();
+    timerView.classList.remove("open");
+    if (completed) chime();
+    const t = new Date();
+    openSheet(todayKey(), `${MONTHS[t.getMonth()]} ${t.getDate()}, ${t.getFullYear()}`, minutes);
+  }
+
+  function resumeTimer() {
+    let saved;
+    try { saved = JSON.parse(localStorage.getItem(TIMER_KEY)); } catch {}
+    if (!saved || !saved.startedAt) return localStorage.removeItem(TIMER_KEY);
+    const elapsed = Date.now() - saved.startedAt;
+    if (elapsed < 0 || elapsed > MAX_RUN_MS) return localStorage.removeItem(TIMER_KEY);
+    timer = saved;
+    if (saved.targetMin > 0 && elapsed >= saved.targetMin * 60000) {
+      // It ran out while the app was closed — treat it as completed.
+      openTimerView(saved.targetMin);
+      finishTimer(true);
+      return;
+    }
+    openTimerView(saved.targetMin);
+    requestWakeLock();
+    startTicking();
+  }
+
+  async function requestWakeLock() {
+    try {
+      if (navigator.wakeLock) wakeLock = await navigator.wakeLock.request("screen");
+    } catch {}
+  }
+
+  function releaseWakeLock() {
+    try { if (wakeLock) wakeLock.release(); } catch {}
+    wakeLock = null;
+  }
+
+  // Audio has to be unlocked by a user gesture, so the context is created when
+  // the timer starts rather than when the bell rings.
+  function primeAudio() {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+    } catch {}
+  }
+
+  function chime() {
+    if (!audioCtx) return;
+    try {
+      const now = audioCtx.currentTime;
+      [528, 396].forEach((freq, i) => {
+        const at = now + i * 0.9;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, at);
+        gain.gain.exponentialRampToValueAtTime(0.3, at + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, at + 2.2);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(at);
+        osc.stop(at + 2.4);
+      });
+    } catch {}
+  }
+
+  document.getElementById("begin-btn").addEventListener("click", () => {
+    backdrop.classList.add("open");
+    timerSheet.classList.add("open");
+  });
+
+  document.querySelectorAll(".len").forEach((b) =>
+    b.addEventListener("click", () => startTimer(Number(b.dataset.min)))
+  );
+
+  document.getElementById("timer-end").addEventListener("click", () => finishTimer(false));
+
+  // Re-acquire the wake lock after the screen has been off, and re-sync the
+  // display, which may be stale if the tab was throttled.
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden || !timer) return;
+    requestWakeLock();
+    tick();
+  });
+
   renderGreeting();
   // Keep the greeting honest if the app is left open across morning/evening.
   document.addEventListener("visibilitychange", () => {
@@ -1082,6 +1416,8 @@
 
   // First run: ask who this is.
   if (localStorage.getItem(NAME_KEY) === null) openNameSheet(true);
+
+  resumeTimer();
 
   document.getElementById("prev").addEventListener("click", () => {
     view.setMonth(view.getMonth() - 1);
