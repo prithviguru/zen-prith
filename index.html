@@ -874,6 +874,10 @@
     </button>
   </div>
 
+  <!-- A media element, not the Web Audio API: iOS silences Web Audio when the
+       ring/silent switch is on, but plays media elements through it. -->
+  <audio id="bell" src="bell.wav" preload="auto" playsinline></audio>
+
   <div class="timer-view" id="timer-view" role="dialog" aria-modal="true" aria-label="Meditation timer">
     <div class="timer-stage">
       <svg class="ring" viewBox="0 0 240 240" aria-hidden="true">
@@ -1335,7 +1339,7 @@
   let timer = null;   // { startedAt, targetMin } — targetMin 0 means open-ended
   let tickId = null;
   let wakeLock = null;
-  let audioCtx = null;
+  const bell = document.getElementById("bell");
 
   function fmt(ms) {
     const total = Math.max(0, Math.round(ms / 1000));
@@ -1430,33 +1434,28 @@
     wakeLock = null;
   }
 
-  // Audio has to be unlocked by a user gesture, so the context is created when
-  // the timer starts rather than when the bell rings.
+  // iOS only lets a page play audio later if it has played some during a real
+  // tap, so the bell is started and immediately rewound when the timer begins.
   function primeAudio() {
     try {
-      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === "suspended") audioCtx.resume();
+      bell.muted = true;
+      const p = bell.play();
+      const settle = () => {
+        bell.pause();
+        bell.currentTime = 0;
+        bell.muted = false;
+      };
+      if (p && p.then) p.then(settle).catch(settle);
+      else settle();
     } catch {}
   }
 
   function chime() {
-    if (!audioCtx) return;
     try {
-      const now = audioCtx.currentTime;
-      [528, 396].forEach((freq, i) => {
-        const at = now + i * 0.9;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = "sine";
-        osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0.0001, at);
-        gain.gain.exponentialRampToValueAtTime(0.3, at + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, at + 2.2);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start(at);
-        osc.stop(at + 2.4);
-      });
+      bell.muted = false;
+      bell.currentTime = 0;
+      const p = bell.play();
+      if (p && p.catch) p.catch(() => {});
     } catch {}
   }
 
