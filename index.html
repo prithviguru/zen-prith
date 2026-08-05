@@ -26,10 +26,11 @@
     --accent: #a3b18a;
     --accent-soft: rgba(163, 177, 138, 0.14);
     --accent-glow: rgba(163, 177, 138, 0.35);
-    /* Rating palette: muted sage / sand / clay. */
-    --r-good: #a3b18a;
-    --r-okay: #c9b184;
-    --r-rough: #bd8d82;
+    /* Rating palette: separated enough to read at dot size — green, amber,
+       terracotta — while staying muted against the dark page. */
+    --r-good: #9ec27b;
+    --r-okay: #e0b544;
+    --r-rough: #d1675a;
     --radius: 20px;
   }
 
@@ -290,10 +291,10 @@
     content: "";
     position: absolute;
     left: 50%;
-    bottom: 5px;
+    bottom: 4.5px;
     transform: translateX(-50%);
-    width: 5px;
-    height: 5px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
   }
 
