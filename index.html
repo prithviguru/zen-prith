@@ -506,9 +506,6 @@
     background: currentColor;
   }
   /* Same wash as the calendar circles, so legend and days always agree. */
-  /* "No rating" is the bare ring — exactly how such a day looks on the
-     calendar. */
-  .sw-plain { color: transparent; }
   .sw-good  { color: var(--r-good); }
   .sw-okay  { color: var(--r-okay); }
   .sw-rough { color: var(--r-rough); }
@@ -570,7 +567,7 @@
     margin: 4px 0 18px;
   }
 
-  .opts { display: flex; gap: 8px; }
+  .opts { display: flex; gap: 10px; }
 
   .opt {
     flex: 1;
@@ -578,16 +575,16 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 9px;
+    gap: 10px;
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 16px;
-    padding: 14px 4px 11px;
+    padding: 16px 8px 13px;
     color: var(--text-dim);
     font-family: inherit;
-    font-size: 9.5px;
+    font-size: 11px;
     font-weight: 500;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     cursor: pointer;
     transition: border-color 0.2s, color 0.2s, background 0.2s, transform 0.15s;
@@ -840,8 +837,8 @@
       <button class="opt" data-rating="good"><i class="dot-sw sw-good"></i>Good</button>
       <button class="opt" data-rating="okay"><i class="dot-sw sw-okay"></i>Okay</button>
       <button class="opt" data-rating="rough"><i class="dot-sw sw-rough"></i>Not great</button>
-      <button class="opt" data-rating=""><i class="dot-sw sw-plain"></i>No rating</button>
     </div>
+    <button class="goal-done" id="sheet-save">Save</button>
     <button class="sheet-remove" id="sheet-remove">Remove this day</button>
   </div>
 
@@ -925,6 +922,7 @@
   view.setDate(1);
   let sheetKey = null;   // date currently open in the rating sheet
   let selMinutes = null; // length chosen in the sheet, null = not recorded
+  let selRating = null;  // rating chosen in the sheet, null = none
   let durExpanded = false; // "More" tapped: show the full set of lengths
   let justRated = null;  // date to pop-animate on next render
 
@@ -1075,11 +1073,8 @@
     selMinutes = presetMinutes != null ? presetMinutes : (e && e.minutes) || null;
     durExpanded = false;
     document.getElementById("sheet-date").textContent = label;
-    document.querySelectorAll(".opt").forEach((b) =>
-      // Only mark "No rating" on a day that is actually logged — on a fresh
-      // day nothing is selected, since tapping it is what logs the day.
-      b.classList.toggle("selected", e ? b.dataset.rating === (e.rating || "") : false)
-    );
+    selRating = (e && e.rating) || null;
+    markOptSelection();
     renderDurs();
     removeBtn.style.display = e ? "block" : "none";
     backdrop.classList.add("open");
@@ -1181,15 +1176,6 @@
   function setDuration(v) {
     selMinutes = v;
     markDurSelection();
-    // If the day is already logged, changing the length saves on the spot —
-    // no need to re-pick a rating just to adjust the minutes.
-    const e = log[sheetKey];
-    if (e) {
-      if (v) e.minutes = v;
-      else delete e.minutes;
-      save();
-      render();
-    }
   }
 
   function closeSheet() {
@@ -1201,23 +1187,34 @@
     timerSheet.classList.remove("open");
   }
 
+  function markOptSelection() {
+    document.querySelectorAll(".opt").forEach((b) =>
+      b.classList.toggle("selected", b.dataset.rating === selRating)
+    );
+  }
+
+  // Nothing in the sheet commits on its own — the rating and the length are
+  // both just selections until Save, and dismissing throws them away.
   document.querySelectorAll(".opt").forEach((b) =>
     b.addEventListener("click", () => {
-      if (!sheetKey) return;
-      const e = log[sheetKey] || {};
-      // The empty value is the "No rating" option: the day still counts, it
-      // just carries no opinion about how the sit went.
-      if (b.dataset.rating) e.rating = b.dataset.rating;
-      else delete e.rating;
-      if (selMinutes) e.minutes = selMinutes;
-      else delete e.minutes;
-      log[sheetKey] = e;
-      justRated = sheetKey;
-      save();
-      closeSheet();
-      render();
+      selRating = selRating === b.dataset.rating ? null : b.dataset.rating;
+      markOptSelection();
     })
   );
+
+  // Saving with nothing chosen still logs the day: a session counts on its
+  // own, with or without an opinion about how it went.
+  document.getElementById("sheet-save").addEventListener("click", () => {
+    if (!sheetKey) return;
+    const e = {};
+    if (selRating) e.rating = selRating;
+    if (selMinutes) e.minutes = selMinutes;
+    log[sheetKey] = e;
+    justRated = sheetKey;
+    save();
+    closeSheet();
+    render();
+  });
 
   removeBtn.addEventListener("click", () => {
     if (!sheetKey) return;
