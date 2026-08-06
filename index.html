@@ -612,6 +612,25 @@
     transition: color 0.2s;
   }
   .sheet-remove:hover { color: #c99a8f; }
+  .bell-preview:hover { color: var(--accent); }
+
+  .bell-note {
+    margin-top: 2px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-faint);
+    min-height: 14px;
+  }
+
+  /* Small enough to ignore, present enough to confirm an update landed. */
+  .build {
+    margin: -18px 0 -14px;
+    text-align: center;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(85, 83, 77, 0.55);
+  }
 
   /* ---------- session length ---------- */
   .dur-label {
@@ -819,6 +838,8 @@
       <div class="grid" id="grid"></div>
     </section>
 
+    <p class="build">Zen v16</p>
+
     <footer aria-label="Rating legend">
       <span><i class="dot-sw sw-good"></i>Good</span>
       <span><i class="dot-sw sw-okay"></i>Okay</span>
@@ -872,6 +893,8 @@
       <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 1h6"/></svg>
       Sit for as long as you like
     </button>
+    <button class="sheet-remove bell-preview" id="bell-preview">Hear the bell</button>
+    <p class="bell-note" id="bell-note"></p>
   </div>
 
   <!-- A media element, not the Web Audio API: iOS silences Web Audio when the
@@ -1339,6 +1362,7 @@
   let timer = null;   // { startedAt, targetMin } — targetMin 0 means open-ended
   let tickId = null;
   let wakeLock = null;
+  let bellError = null;
   const bell = document.getElementById("bell");
 
   function fmt(ms) {
@@ -1438,25 +1462,34 @@
   // tap, so the bell is started and immediately rewound when the timer begins.
   function primeAudio() {
     try {
-      bell.muted = true;
+      // Play unmuted and stop immediately. Priming muted does NOT work: iOS
+      // allows muted playback without a gesture, so it never unlocks audio for
+      // the unprompted play at the end of the countdown. The bell opens with a
+      // 30 ms fade-in, so these few milliseconds are silent anyway.
+      bell.muted = false;
+      bell.volume = 1;
       const p = bell.play();
       const settle = () => {
         bell.pause();
         bell.currentTime = 0;
-        bell.muted = false;
       };
-      if (p && p.then) p.then(settle).catch(settle);
+      if (p && p.then) p.then(settle).catch((e) => { bellError = e && e.name; settle(); });
       else settle();
-    } catch {}
+    } catch (e) {
+      bellError = e && e.name;
+    }
   }
 
   function chime() {
     try {
       bell.muted = false;
+      bell.volume = 1;
       bell.currentTime = 0;
       const p = bell.play();
-      if (p && p.catch) p.catch(() => {});
-    } catch {}
+      if (p && p.catch) p.catch((e) => { bellError = e && e.name; });
+    } catch (e) {
+      bellError = e && e.name;
+    }
   }
 
   document.getElementById("begin-btn").addEventListener("click", () => {
@@ -1470,6 +1503,25 @@
 
   // Stopwatch is the same machinery with no target: it counts up until ended.
   document.getElementById("stopwatch-btn").addEventListener("click", () => startTimer(0));
+
+  // Hearing the bell on demand is worth having on its own, and it says plainly
+  // whether the phone can play it at all.
+  document.getElementById("bell-preview").addEventListener("click", () => {
+    const note = document.getElementById("bell-note");
+    bellError = null;
+    note.textContent = "";
+    if (!bell.paused) {
+      bell.pause();
+      bell.currentTime = 0;
+      return;
+    }
+    chime();
+    setTimeout(() => {
+      if (bellError) note.textContent = `Could not play: ${bellError}`;
+      else if (bell.paused) note.textContent = "Could not play: no sound started";
+      else if (bell.muted || bell.volume === 0) note.textContent = "Playing, but muted";
+    }, 400);
+  });
 
   document.getElementById("timer-end").addEventListener("click", () => finishTimer(false));
 
