@@ -1,8 +1,14 @@
-// Zen service worker: precache the app shell, then serve everything
-// cache-first with a background refresh (stale-while-revalidate), so the
-// app opens instantly and works fully offline once visited.
+// Zen service worker.
+//
+// The page itself is fetched network-first: it is a few KB, and serving it
+// from cache meant every update arrived a launch late — or never, since an
+// installed app that is resumed rather than cold-started may not request the
+// page at all. Everything else (audio, icons) is cache-first with a
+// background refresh, since those are large and rarely change.
+//
+// Offline still works: a failed page fetch falls back to the cached copy.
 
-const CACHE = "zen-v18";
+const CACHE = "zen-v20";
 const SHELL = [
   "./",
   "./index.html",
@@ -31,6 +37,24 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
+
+  if (e.request.mode === "navigate") {
+    e.respondWith(
+      fetch(e.request)
+        .then((res) => {
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(e.request, copy));
+          }
+          return res;
+        })
+        .catch(() =>
+          caches.match(e.request).then((r) => r || caches.match("./index.html")).then((r) => r || caches.match("./"))
+        )
+    );
+    return;
+  }
+
   e.respondWith(
     caches.match(e.request).then((cached) => {
       const refresh = fetch(e.request)

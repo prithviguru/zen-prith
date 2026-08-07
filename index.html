@@ -1545,7 +1545,24 @@
   render();
 
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("sw.js");
+    // Resuming an installed app doesn't always re-navigate, so ask for an
+    // update check whenever it comes back to the foreground.
+    navigator.serviceWorker.register("sw.js").then((reg) => {
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) reg.update();
+      });
+    }).catch(() => {});
+
+    // When a new version takes over, the page on screen is still the old one.
+    // Reload it — but never in the middle of a sit, which would drop the wake
+    // lock and the primed audio, so the bell would not ring.
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloading = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!hadController || reloading || timer) return;
+      reloading = true;
+      location.reload();
+    });
   }
 
   // Ask the browser not to evict our storage under disk pressure.
