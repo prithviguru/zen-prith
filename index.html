@@ -612,15 +612,7 @@
     transition: color 0.2s;
   }
   .sheet-remove:hover { color: #c99a8f; }
-  .bell-preview:hover { color: var(--accent); }
 
-  .bell-note {
-    margin-top: 2px;
-    text-align: center;
-    font-size: 11px;
-    color: var(--text-faint);
-    min-height: 14px;
-  }
 
 
   /* ---------- session length ---------- */
@@ -881,8 +873,6 @@
       <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 1h6"/></svg>
       Sit for as long as you like
     </button>
-    <button class="sheet-remove bell-preview" id="bell-preview">Hear the bell</button>
-    <p class="bell-note" id="bell-note"></p>
   </div>
 
   <!-- A media element, not the Web Audio API: iOS silences Web Audio when the
@@ -1350,7 +1340,6 @@
   let timer = null;   // { startedAt, targetMin } — targetMin 0 means open-ended
   let tickId = null;
   let wakeLock = null;
-  let bellError = null;
   const bell = document.getElementById("bell");
 
   function fmt(ms) {
@@ -1461,11 +1450,9 @@
         bell.pause();
         bell.currentTime = 0;
       };
-      if (p && p.then) p.then(settle).catch((e) => { bellError = e && e.name; settle(); });
+      if (p && p.then) p.then(settle).catch(settle);
       else settle();
-    } catch (e) {
-      bellError = e && e.name;
-    }
+    } catch {}
   }
 
   function chime() {
@@ -1474,10 +1461,8 @@
       bell.volume = 1;
       bell.currentTime = 0;
       const p = bell.play();
-      if (p && p.catch) p.catch((e) => { bellError = e && e.name; });
-    } catch (e) {
-      bellError = e && e.name;
-    }
+      if (p && p.catch) p.catch(() => {});
+    } catch {}
   }
 
   document.getElementById("begin-btn").addEventListener("click", () => {
@@ -1492,24 +1477,6 @@
   // Stopwatch is the same machinery with no target: it counts up until ended.
   document.getElementById("stopwatch-btn").addEventListener("click", () => startTimer(0));
 
-  // Hearing the bell on demand is worth having on its own, and it says plainly
-  // whether the phone can play it at all.
-  document.getElementById("bell-preview").addEventListener("click", () => {
-    const note = document.getElementById("bell-note");
-    bellError = null;
-    note.textContent = "";
-    if (!bell.paused) {
-      bell.pause();
-      bell.currentTime = 0;
-      return;
-    }
-    chime();
-    setTimeout(() => {
-      if (bellError) note.textContent = `Could not play: ${bellError}`;
-      else if (bell.paused) note.textContent = "Could not play: no sound started";
-      else if (bell.muted || bell.volume === 0) note.textContent = "Playing, but muted";
-    }, 400);
-  });
 
   document.getElementById("timer-end").addEventListener("click", () => finishTimer(false));
 
