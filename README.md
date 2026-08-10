@@ -22,6 +22,11 @@ One breath at a time.
   closing the app mid-sit doesn't lose the session.
 - **Weekly goal** — sessions this week against your goal (e.g. 3/5); the tile
   glows when the goal is met. Tap it to set the goal (1–7 sessions per week).
+- **Every past week, in the calendar** — a `WK` column tallies each row, since
+  a month grid's rows are already Sunday–Saturday weeks. Weeks that hit the
+  goal show in sage. Counts follow the true week, including days in a
+  neighbouring month, and are measured against your *current* goal — past
+  goals aren't stored.
 - **Personal greeting** — a time-aware "Good morning, <name>" header. Each
   install asks for a name on first open; tap the greeting to change it.
 - **Monthly counts** at a glance — total sessions and Good-rated days for

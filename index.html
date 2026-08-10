@@ -404,11 +404,27 @@
     background: var(--surface-2);
   }
 
+  /* Seven days, then a narrow column tallying that week — every row of a
+     month grid is already a week, so the history has somewhere to live. */
   .grid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(7, 1fr) 34px;
     gap: 6px 4px;
   }
+
+  .wk {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 6px;
+    border-left: 1px solid var(--line);
+    font-size: 11px;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .wk.met { color: var(--accent); font-weight: 500; }
+
+  .wk-head { margin-left: 6px; }
 
   .dow {
     text-align: center;
@@ -1007,14 +1023,20 @@
       el.textContent = d;
       grid.appendChild(el);
     }
+    const wkHead = document.createElement("div");
+    wkHead.className = "dow wk-head";
+    wkHead.textContent = "WK";
+    grid.appendChild(wkHead);
 
     const firstDow = new Date(y, m, 1).getDay();
     const total = new Date(y, m + 1, 0).getDate();
+    let cells = 0; // days placed so far, to know when a week row is full
 
     for (let i = 0; i < firstDow; i++) {
       const el = document.createElement("div");
       el.className = "day blank";
       grid.appendChild(el);
+      cells++;
     }
 
     for (let d = 1; d <= total; d++) {
@@ -1042,10 +1064,48 @@
         el.addEventListener("click", () => openSheet(k, `${MONTHS[m]} ${d}, ${y}`));
       }
       grid.appendChild(el);
+      cells++;
+      if (cells % 7 === 0) grid.appendChild(weekCell(y, m, d));
+    }
+    // Pad the last row so its tally lands in the week column, not mid-row.
+    if (cells % 7) {
+      for (let i = cells % 7; i < 7; i++) {
+        const el = document.createElement("div");
+        el.className = "day blank";
+        grid.appendChild(el);
+      }
+      grid.appendChild(weekCell(y, m, total));
     }
     justRated = null;
 
     updateStats(y, m);
+  }
+
+  // Sessions logged in the Sunday–Saturday week containing the given day.
+  // Counts the real week, including days that fall in a neighbouring month,
+  // so a row spanning two months still reports the truth.
+  function weekTally(y, m, d) {
+    const day = new Date(y, m, d);
+    const start = new Date(y, m, d - day.getDay());
+    let n = 0;
+    for (let i = 0; i < 7; i++) {
+      const c = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      if (log[key(c.getFullYear(), c.getMonth(), c.getDate())]) n++;
+    }
+    return { n, start };
+  }
+
+  function weekCell(y, m, d) {
+    const el = document.createElement("div");
+    el.className = "wk";
+    const { n, start } = weekTally(y, m, d);
+    // Weeks that haven't begun have nothing to say yet.
+    if (start > new Date()) return el;
+    el.textContent = n;
+    if (n >= goal) el.classList.add("met");
+    el.setAttribute("aria-label",
+      `Week of ${MONTHS[start.getMonth()]} ${start.getDate()}: ${n} of ${goal} sessions`);
+    return el;
   }
 
   function updateStats(y, m) {
