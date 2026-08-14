@@ -119,6 +119,43 @@ probably the right answer.
 
 ---
 
+## 6. Live on the desktop rather than in a window
+
+> A small always-visible calendar sitting on the desktop, like a widget,
+> instead of an app window you open.
+
+**Status:** not started, and not possible as a web app — this is the one
+request so far that the PWA approach can't reach at all.
+
+**Why:** desktop widgets are a native surface. macOS widgets are WidgetKit
+extensions shipped inside a signed native app; Windows widgets likewise come
+from a packaged app. A web page cannot render into either. Web apps also
+can't ask to be always-on-top, borderless, or pinned behind other windows —
+those are window-manager powers no browser exposes.
+
+**The paths, honestly:**
+
+- **A native wrapper** (Tauri or Electron) loading the same `index.html`.
+  Gets a real always-on-top, transparent, borderless window. Costs the thing
+  that has made this project pleasant: no build step, no signing, no
+  installer, and "just open the link" for family. Tauri is the lighter of the
+  two.
+- **A genuine macOS widget** in Swift. The best result and the most work —
+  and it hits a wall the wrapper doesn't: **a native widget cannot read the
+  app's data.** Everything lives in browser `localStorage`, which is private
+  to the browser. A widget would need the data somewhere it can reach, which
+  means cloud sync (item 3) or an exported file, first.
+- **Live with a window.** Installed as a desktop app it already runs in its
+  own frameless-ish window; a third-party utility can pin it always-on-top.
+  Zero engineering, most of the benefit.
+
+**Worth noting:** the meeting-gap nudge (item 5) is the part of "desktop app"
+that actually changes behaviour, and it does *not* need any of this — a
+notification from an open window is enough. Probably worth building that
+before spending a native wrapper on ambience.
+
+---
+
 ## Parking lot
 
 Smaller things mentioned in passing, not yet thought through:

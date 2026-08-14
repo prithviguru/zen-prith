@@ -404,11 +404,30 @@
     background: var(--surface-2);
   }
 
+  /* Seven days, then a narrow column tallying that week — every row of a
+     month grid is already a week, so the history has somewhere to live. */
   .grid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(7, 1fr) 42px;
     gap: 6px 4px;
   }
+
+  .wk {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 6px;
+    border-left: 1px solid var(--line);
+    font-size: 10.5px;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+  }
+  /* The goal reads lighter than the count, so the number still leads. */
+  .wk i { font-style: normal; opacity: 0.5; }
+  .wk.met { color: var(--accent); }
+
+  .wk-head { margin-left: 6px; }
 
   .dow {
     text-align: center;
@@ -801,7 +820,7 @@
       <button class="stat stat-btn" id="week-card" aria-haspopup="dialog">
         <svg class="week-pencil" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
         <b><span id="week-count">0</span><i>/</i><em id="week-goal">5</em></b>
-        <span>This week</span>
+        <span id="week-label">This week</span>
       </button>
       <div class="stat"><b id="stat-month">0</b><span>This month</span></div>
       <div class="stat"><b id="stat-good">0</b><span>Good days</span></div>
@@ -909,6 +928,7 @@
   const STORAGE_KEY = "zen-meditation-log";
   const LEGACY_KEY = "zen-meditation-days";
   const GOAL_KEY = "zen-weekly-goal";
+  const GOALS_KEY = "zen-goal-history";
   const NAME_KEY = "zen-name";
   const TIMER_KEY = "zen-timer";
   const MONTHS = ["January","February","March","April","May","June",
@@ -922,6 +942,7 @@
   // log maps ISO date -> rating: "good" | "okay" | "rough"
   let log = load();
   let goal = loadGoal();
+  let goals = loadGoals();
   let name = localStorage.getItem(NAME_KEY) || "";
   let view = new Date();
   view.setDate(1);
@@ -977,6 +998,54 @@
     return g >= 1 && g <= 7 ? g : 5;
   }
 
+  function isoDay(d) {
+    return key(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+
+  function weekStartOf(d) {
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay());
+  }
+
+  /* ---------- goal history ----------
+     A week should be judged by the goal that was set at the time, not by
+     whatever it happens to be today. Each change is recorded against the week
+     it took effect, and a week uses the most recent change on or before it. */
+  function loadGoals() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(GOALS_KEY));
+      if (Array.isArray(raw)) {
+        const clean = raw
+          .filter((e) => e && typeof e.start === "string" && e.goal >= 1 && e.goal <= 7)
+          .sort((a, b) => (a.start < b.start ? -1 : 1));
+        if (clean.length) return clean;
+      }
+    } catch {}
+    // Nothing recorded yet: today's goal is all we know. Weeks before it fall
+    // back to the same number, since earlier goals were never kept.
+    const seeded = [{ start: isoDay(weekStartOf(new Date())), goal }];
+    localStorage.setItem(GOALS_KEY, JSON.stringify(seeded));
+    return seeded;
+  }
+
+  function goalForWeek(start) {
+    const iso = isoDay(start);
+    let g = goals[0].goal;
+    for (const e of goals) {
+      if (e.start > iso) break;
+      g = e.goal;
+    }
+    return g;
+  }
+
+  function recordGoal(g) {
+    const iso = isoDay(weekStartOf(new Date()));
+    const last = goals[goals.length - 1];
+    // Changing the goal twice in one week is one decision, not two.
+    if (last && last.start === iso) last.goal = g;
+    else goals.push({ start: iso, goal: g });
+    localStorage.setItem(GOALS_KEY, JSON.stringify(goals));
+  }
+
   function saveGoal() {
     localStorage.setItem(GOAL_KEY, String(goal));
   }
@@ -1007,14 +1076,20 @@
       el.textContent = d;
       grid.appendChild(el);
     }
+    const wkHead = document.createElement("div");
+    wkHead.className = "dow wk-head";
+    wkHead.textContent = "WK";
+    grid.appendChild(wkHead);
 
     const firstDow = new Date(y, m, 1).getDay();
     const total = new Date(y, m + 1, 0).getDate();
+    let cells = 0; // days placed so far, to know when a week row is full
 
     for (let i = 0; i < firstDow; i++) {
       const el = document.createElement("div");
       el.className = "day blank";
       grid.appendChild(el);
+      cells++;
     }
 
     for (let d = 1; d <= total; d++) {
@@ -1042,10 +1117,49 @@
         el.addEventListener("click", () => openSheet(k, `${MONTHS[m]} ${d}, ${y}`));
       }
       grid.appendChild(el);
+      cells++;
+      if (cells % 7 === 0) grid.appendChild(weekCell(y, m, d));
+    }
+    // Pad the last row so its tally lands in the week column, not mid-row.
+    if (cells % 7) {
+      for (let i = cells % 7; i < 7; i++) {
+        const el = document.createElement("div");
+        el.className = "day blank";
+        grid.appendChild(el);
+      }
+      grid.appendChild(weekCell(y, m, total));
     }
     justRated = null;
 
     updateStats(y, m);
+  }
+
+  // Sessions logged in the Sunday–Saturday week containing the given day.
+  // Counts the real week, including days that fall in a neighbouring month,
+  // so a row spanning two months still reports the truth.
+  function weekTally(y, m, d) {
+    const day = new Date(y, m, d);
+    const start = new Date(y, m, d - day.getDay());
+    let n = 0;
+    for (let i = 0; i < 7; i++) {
+      const c = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      if (log[key(c.getFullYear(), c.getMonth(), c.getDate())]) n++;
+    }
+    return { n, start };
+  }
+
+  function weekCell(y, m, d) {
+    const el = document.createElement("div");
+    el.className = "wk";
+    const { n, start } = weekTally(y, m, d);
+    // Weeks that haven't begun have nothing to say yet.
+    if (start > new Date()) return el;
+    const g = goalForWeek(start);
+    el.innerHTML = `${n}<i>/${g}</i>`;
+    if (n >= g) el.classList.add("met");
+    el.setAttribute("aria-label",
+      `Week of ${MONTHS[start.getMonth()]} ${start.getDate()}: ${n} of ${g} sessions`);
+    return el;
   }
 
   function updateStats(y, m) {
@@ -1059,12 +1173,53 @@
     document.getElementById("stat-month").textContent = monthCount;
     document.getElementById("stat-good").textContent = goodCount;
 
-    const wc = weekCount();
-    document.getElementById("week-count").textContent = wc;
-    document.getElementById("week-goal").textContent = goal;
+    // "This week" only means something in the month you're actually in. Look
+    // at another month and the tile answers the question that month can
+    // answer: how many of its weeks hit the goal.
+    const now = new Date();
+    const viewingNow = now.getFullYear() === y && now.getMonth() === m;
+    const count = document.getElementById("week-count");
+    const slash = count.nextElementSibling;
+    const denom = document.getElementById("week-goal");
     const card = document.getElementById("week-card");
-    card.classList.toggle("met", wc >= goal);
-    card.setAttribute("aria-label", `This week: ${wc} of ${goal} sessions. Edit weekly goal.`);
+    let met;
+
+    if (viewingNow) {
+      const wc = weekCount();
+      met = wc >= goal;
+      count.textContent = wc;
+      slash.textContent = "/";
+      denom.textContent = goal;
+      document.getElementById("week-label").textContent = "This week";
+      card.setAttribute("aria-label", `This week: ${wc} of ${goal} sessions. Edit weekly goal.`);
+    } else {
+      const { hit, started } = monthWeeks(y, m);
+      met = started > 0 && hit === started;
+      count.textContent = started ? hit : "—";
+      slash.textContent = started ? "/" : "";
+      denom.textContent = started ? started : "";
+      document.getElementById("week-label").textContent = "Weeks met";
+      card.setAttribute("aria-label",
+        started
+          ? `${MONTHS[m]}: ${hit} of ${started} weeks met the goal. Edit weekly goal.`
+          : `${MONTHS[m]}: no weeks yet. Edit weekly goal.`);
+    }
+    card.classList.toggle("met", met);
+  }
+
+  // How many of a month's weeks hit the goal, out of those that have begun.
+  function monthWeeks(y, m) {
+    const total = new Date(y, m + 1, 0).getDate();
+    const firstDow = new Date(y, m, 1).getDay();
+    const now = new Date();
+    let hit = 0, started = 0;
+    for (let d = 1 - firstDow; d <= total; d += 7) {
+      if (new Date(y, m, d) > now) break;
+      started++;
+      const { n, start } = weekTally(y, m, d);
+      if (n >= goalForWeek(start)) hit++;
+    }
+    return { hit, started };
   }
 
   /* ---------- rating sheet ---------- */
@@ -1276,7 +1431,9 @@
     goal = Math.min(7, Math.max(1, g));
     goalNum.textContent = goal;
     saveGoal();
-    updateStats(view.getFullYear(), view.getMonth());
+    recordGoal(goal);
+    // Rebuild rather than just re-stat: the week column carries goals too.
+    render();
   }
 
   document.getElementById("week-card").addEventListener("click", () => {
