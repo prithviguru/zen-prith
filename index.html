@@ -928,6 +928,7 @@
   const STORAGE_KEY = "zen-meditation-log";
   const LEGACY_KEY = "zen-meditation-days";
   const GOAL_KEY = "zen-weekly-goal";
+  const GOALS_KEY = "zen-goal-history";
   const NAME_KEY = "zen-name";
   const TIMER_KEY = "zen-timer";
   const MONTHS = ["January","February","March","April","May","June",
@@ -941,6 +942,7 @@
   // log maps ISO date -> rating: "good" | "okay" | "rough"
   let log = load();
   let goal = loadGoal();
+  let goals = loadGoals();
   let name = localStorage.getItem(NAME_KEY) || "";
   let view = new Date();
   view.setDate(1);
@@ -994,6 +996,54 @@
   function loadGoal() {
     const g = parseInt(localStorage.getItem(GOAL_KEY), 10);
     return g >= 1 && g <= 7 ? g : 5;
+  }
+
+  function isoDay(d) {
+    return key(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+
+  function weekStartOf(d) {
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay());
+  }
+
+  /* ---------- goal history ----------
+     A week should be judged by the goal that was set at the time, not by
+     whatever it happens to be today. Each change is recorded against the week
+     it took effect, and a week uses the most recent change on or before it. */
+  function loadGoals() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(GOALS_KEY));
+      if (Array.isArray(raw)) {
+        const clean = raw
+          .filter((e) => e && typeof e.start === "string" && e.goal >= 1 && e.goal <= 7)
+          .sort((a, b) => (a.start < b.start ? -1 : 1));
+        if (clean.length) return clean;
+      }
+    } catch {}
+    // Nothing recorded yet: today's goal is all we know. Weeks before it fall
+    // back to the same number, since earlier goals were never kept.
+    const seeded = [{ start: isoDay(weekStartOf(new Date())), goal }];
+    localStorage.setItem(GOALS_KEY, JSON.stringify(seeded));
+    return seeded;
+  }
+
+  function goalForWeek(start) {
+    const iso = isoDay(start);
+    let g = goals[0].goal;
+    for (const e of goals) {
+      if (e.start > iso) break;
+      g = e.goal;
+    }
+    return g;
+  }
+
+  function recordGoal(g) {
+    const iso = isoDay(weekStartOf(new Date()));
+    const last = goals[goals.length - 1];
+    // Changing the goal twice in one week is one decision, not two.
+    if (last && last.start === iso) last.goal = g;
+    else goals.push({ start: iso, goal: g });
+    localStorage.setItem(GOALS_KEY, JSON.stringify(goals));
   }
 
   function saveGoal() {
@@ -1104,10 +1154,11 @@
     const { n, start } = weekTally(y, m, d);
     // Weeks that haven't begun have nothing to say yet.
     if (start > new Date()) return el;
-    el.innerHTML = `${n}<i>/${goal}</i>`;
-    if (n >= goal) el.classList.add("met");
+    const g = goalForWeek(start);
+    el.innerHTML = `${n}<i>/${g}</i>`;
+    if (n >= g) el.classList.add("met");
     el.setAttribute("aria-label",
-      `Week of ${MONTHS[start.getMonth()]} ${start.getDate()}: ${n} of ${goal} sessions`);
+      `Week of ${MONTHS[start.getMonth()]} ${start.getDate()}: ${n} of ${g} sessions`);
     return el;
   }
 
@@ -1165,7 +1216,8 @@
     for (let d = 1 - firstDow; d <= total; d += 7) {
       if (new Date(y, m, d) > now) break;
       started++;
-      if (weekTally(y, m, d).n >= goal) hit++;
+      const { n, start } = weekTally(y, m, d);
+      if (n >= goalForWeek(start)) hit++;
     }
     return { hit, started };
   }
@@ -1379,7 +1431,9 @@
     goal = Math.min(7, Math.max(1, g));
     goalNum.textContent = goal;
     saveGoal();
-    updateStats(view.getFullYear(), view.getMonth());
+    recordGoal(goal);
+    // Rebuild rather than just re-stat: the week column carries goals too.
+    render();
   }
 
   document.getElementById("week-card").addEventListener("click", () => {
