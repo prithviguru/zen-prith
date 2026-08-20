@@ -956,11 +956,21 @@
            placeholder="Google client ID" aria-label="Google OAuth client ID" />
     <input class="name-input" id="cal-id" type="text" spellcheck="false"
            placeholder="Calendar (primary, or an address)" aria-label="Calendar to read" />
-    <p class="mode-label" id="cal-filter-label">Only for meetings matching</p>
+
+    <p class="mode-label">Which meetings</p>
+    <div class="sounds" id="cal-mode">
+      <button class="dur" data-mode="some">Only these</button>
+      <button class="dur" data-mode="all">Every meeting</button>
+    </div>
     <input class="name-input" id="cal-filter" type="text" spellcheck="false"
-           placeholder="e.g. Prabir, 1:1, standup" aria-label="Meeting filter terms" />
-    <p class="note note-sub">Comma separated. Matched against the title, the organiser and
-      anyone invited. Leave empty to be offered every meeting.</p>
+           placeholder="e.g. Prabir, 1:1, standup" aria-label="People or meetings to be nudged before" />
+    <p class="note note-sub" id="cal-filter-help">Comma separated, matched against the title,
+      the organiser and anyone invited.</p>
+
+    <p class="mode-label">Longest sit to offer</p>
+    <div class="sounds" id="cal-sit"></div>
+    <p class="note note-sub">Zen offers the shorter of this and the gap, and always finishes
+      a couple of minutes before the meeting starts.</p>
     <button class="goal-done" id="cal-connect">Connect calendar</button>
     <button class="sheet-remove" id="cal-off">Turn nudges off</button>
   </div>
@@ -1703,8 +1713,11 @@
   const CAL_KEY = "zen-calendar";
   const DEMO_KEY = "zen-calendar-demo"; // seeded events, to try this without OAuth
   const SCOPE = "https://www.googleapis.com/auth/calendar.readonly";
-  const GAP_MIN = 4;   // shorter than this isn't a sit, it's a scramble
-  const GAP_MAX = 20;  // longer than this and you'd have chosen for yourself
+  const GAP_MIN = 5;    // shorter than this isn't a sit, it's a scramble
+  const GAP_MAX = 30;   // beyond this you have time to decide for yourself
+  const BUFFER = 2;     // finish before the meeting starts, not as it starts
+  const SIT_MIN = 3;    // below this there's no point offering
+  const SITS = [5, 10, 15];
   const POLL_MS = 60000;
 
   let cal = loadCal();
@@ -1717,10 +1730,14 @@
     try {
       const c = JSON.parse(localStorage.getItem(CAL_KEY));
       if (c && typeof c === "object")
-        return { enabled: !!c.enabled, clientId: c.clientId || "", filter: c.filter || "",
-                 calendarId: c.calendarId || "primary" };
+        return {
+          enabled: !!c.enabled, clientId: c.clientId || "", filter: c.filter || "",
+          calendarId: c.calendarId || "primary",
+          mode: c.mode === "all" ? "all" : "some",
+          maxSit: SITS.includes(c.maxSit) ? c.maxSit : 10,
+        };
     } catch {}
-    return { enabled: false, clientId: "", filter: "", calendarId: "primary" };
+    return { enabled: false, clientId: "", filter: "", calendarId: "primary", mode: "some", maxSit: 10 };
   }
 
   function saveCal() {
@@ -1729,7 +1746,7 @@
 
   // The gap that's worth offering, or null. Pure, so the rule is testable
   // without a calendar attached.
-  function nextGap(events, now, terms) {
+  function nextGap(events, now, terms, maxSit) {
     const upcoming = (events || [])
       .filter((e) => e && e.start && e.start.dateTime) // timed events only
       .filter(isMeeting)
@@ -1740,9 +1757,13 @@
       .sort((a, b) => a.at - b.at);
     if (!upcoming.length) return null;
     const next = upcoming[0];
-    const mins = Math.round((next.at - now) / 60000);
-    if (mins < GAP_MIN || mins > GAP_MAX) return null;
-    return { ...next, mins };
+    const gap = Math.round((next.at - now) / 60000);
+    if (gap < GAP_MIN || gap > GAP_MAX) return null;
+    // Never offer the whole gap: cap it, and stop short of the meeting so the
+    // sit ends with time to spare rather than at the moment it starts.
+    const mins = Math.min(maxSit || 10, gap - BUFFER);
+    if (mins < SIT_MIN) return null;
+    return { ...next, gap, mins };
   }
 
   // A meeting you've declined isn't a meeting you need settling before.
@@ -1774,6 +1795,7 @@
   }
 
   function calTerms() {
+    if (cal.mode === "all") return [];
     return (cal.filter || "")
       .split(",")
       .map((t) => t.trim().toLowerCase())
@@ -1859,7 +1881,7 @@
     // Never interrupt a sit, and never nudge a window nobody is looking at.
     if (!cal.enabled || timer || document.hidden) return;
     const events = await calEvents();
-    const gap = nextGap(events, new Date(), calTerms());
+    const gap = nextGap(events, new Date(), calTerms(), cal.maxSit);
     if (!gap || nudged.has(gap.id)) return;
     nudged.add(gap.id);
     offerSit(gap);
@@ -1879,7 +1901,28 @@
     const off = document.getElementById("cal-off");
     input.value = cal.clientId;
     input.style.display = cal.enabled ? "none" : "block";
-    document.getElementById("cal-filter").value = cal.filter;
+    const filterField = document.getElementById("cal-filter");
+    filterField.value = cal.filter;
+    const some = cal.mode === "some";
+    filterField.style.display = some ? "block" : "none";
+    document.getElementById("cal-filter-help").style.display = some ? "block" : "none";
+    document.querySelectorAll("#cal-mode .dur").forEach((b) =>
+      b.classList.toggle("selected", b.dataset.mode === cal.mode));
+
+    const sits = document.getElementById("cal-sit");
+    sits.innerHTML = "";
+    for (const v of SITS) {
+      const b = document.createElement("button");
+      b.className = "dur" + (v === cal.maxSit ? " selected" : "");
+      b.textContent = `${v} min`;
+      b.addEventListener("click", () => {
+        cal.maxSit = v;
+        saveCal();
+        calRender();
+      });
+      sits.appendChild(b);
+    }
+
     const idField = document.getElementById("cal-id");
     idField.value = cal.calendarId;
     idField.style.display = cal.enabled ? "none" : "block";
@@ -1887,7 +1930,7 @@
     connect.textContent = cal.enabled ? "Reconnect" : "Connect calendar";
     state.className = "note" + (cal.enabled ? " ok" : "");
     state.textContent = cal.enabled
-      ? `On. You'll be offered a sit when a gap of ${GAP_MIN}–${GAP_MAX} minutes opens up.`
+      ? `On. Up to ${cal.maxSit} minutes, before ${cal.mode === "all" ? "any meeting" : "matching meetings"}.`
       : "";
   }
 
@@ -1906,6 +1949,11 @@
     if (!cal.clientId) {
       state.className = "note bad";
       state.textContent = "Paste the client ID from Google Cloud first.";
+      return;
+    }
+    if (cal.mode === "some" && !calTerms().length) {
+      state.className = "note bad";
+      state.textContent = "Name the people or meetings to be nudged before — or choose Every meeting.";
       return;
     }
     // Both permissions have to be asked for inside this tap.
@@ -1930,6 +1978,15 @@
     calStart();
     calCheck();
   });
+
+  document.querySelectorAll("#cal-mode .dur").forEach((b) =>
+    b.addEventListener("click", () => {
+      cal.mode = b.dataset.mode;
+      saveCal();
+      nudged.clear();
+      calRender();
+    })
+  );
 
   document.getElementById("cal-filter").addEventListener("change", () => {
     cal.filter = document.getElementById("cal-filter").value.trim();

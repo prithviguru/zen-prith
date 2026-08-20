@@ -77,15 +77,20 @@ Then, in the same panel:
 
 - **Calendar** — `primary`, or the address of any calendar you can see. Useful
   if you subscribe a work calendar into your personal Google account.
-- **Only for meetings matching** — comma-separated terms, matched against the
-  title, the organiser and everyone invited. `Prabir, 1:1, @acme.com` all work.
-  Leave it empty to be offered every meeting.
+- **Which meetings** — *Only these* (the default) or *Every meeting*. Choosing
+  *Only these* requires naming people or meetings before it will connect:
+  comma-separated terms matched against the title, the organiser and everyone
+  invited, so `Prabir, 1:1, @acme.com` all work.
+
+- **Longest sit to offer** — 5, 10 or 15 minutes. Zen offers the shorter of
+  this and the gap, and always stops a couple of minutes short so the sit
+  finishes *before* the meeting rather than as it starts.
 
 Zen ignores things that aren't meetings on its own: all-day events, birthdays,
 flights and hotel stays that Gmail files for you, out-of-office blocks,
-anything you've marked *free*, and anything you've declined. It offers a sit
-only when the gap is between 4 and 20 minutes, asks once per meeting, and
-never interrupts a sit already running.
+anything you've marked *free*, and anything you've declined. It considers gaps
+from 5 to 30 minutes, asks once per meeting, and never interrupts a sit
+already running.
 
 **Work accounts:** a Workspace administrator can block third-party apps from
 reading company calendars. If consent fails, either ask IT to allow the client
