@@ -149,10 +149,54 @@ those are window-manager powers no browser exposes.
   own frameless-ish window; a third-party utility can pin it always-on-top.
   Zero engineering, most of the benefit.
 
-**Worth noting:** the meeting-gap nudge (item 5) is the part of "desktop app"
-that actually changes behaviour, and it does *not* need any of this — a
-notification from an open window is enough. Probably worth building that
-before spending a native wrapper on ambience.
+**Worth noting:** the meeting-gap nudge is the part of "desktop app" that
+actually changes behaviour, and it does *not* need any of this — a
+notification from an open window is enough. It is already built and parked in
+PR #19, waiting on a Google OAuth client ID; worth landing that before
+spending a native wrapper on ambience.
+
+---
+
+## 7. Today is hard to pick out in the calendar
+
+> Looking at the grid, you can't tell which day is today.
+
+**Status:** not started. Reported from real use — a visual fix, not a
+behaviour change.
+
+**Why it's weak right now:** today's only marker is `.day.today { color:
+var(--accent) }` — sage `#a3b18a` instead of the usual `#e8e4dc`. Those two
+are close in *lightness*; they differ mainly in hue, which is the weakest
+signal at 14px on a dark background, and the first thing to go under sunlight
+or for anyone slightly colour-blind. It also has real competition: a logged
+day already draws a ring and goes semibold, and now carries up to three
+coloured dots, all of which shout louder than a slightly greener numeral. The
+day most likely to be logged is today, so today is exactly where the marker
+gets drowned out.
+
+**Constraint that shaped the current design:** today used to be marked with a
+dot, and that slot now belongs to the ratings — so whatever replaces it has
+to work *alongside* a ring and up to three dots, not compete for the same
+space.
+
+**Options worth mocking up:**
+
+- **A filled disc behind the number** — sage wash (`--accent-soft`) as the
+  day's background. Reads instantly, survives the ring and dots, and is the
+  most conventional calendar idiom. Risk: it's the heaviest option on a page
+  whose whole character is restraint.
+- **A ring in accent colour** — reuse the logged ring, in sage rather than
+  bone. Cheap, but collides directly with the "logged" ring, and a logged
+  today would have to say two things with one shape.
+- **A small label under the number** — a "today" tick or caret below the day.
+  Clear and calm, but the space under the number is where the dots live.
+- **Weight and brightness rather than hue** — keep today bone-white while
+  dimming every other day slightly. Fits the aesthetic best and needs no new
+  element; needs testing to check it doesn't just make the calendar look
+  greyed out.
+
+**Worth checking while in there:** the same question applies to the `WK`
+column — the current week isn't distinguished from past ones either.
 
 ---
 
