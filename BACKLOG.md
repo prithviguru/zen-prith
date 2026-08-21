@@ -119,7 +119,7 @@ probably the right answer.
 
 ---
 
-## 6. Live on the desktop rather than in a window
+## 5. Live on the desktop rather than in a window
 
 > A small always-visible calendar sitting on the desktop, like a widget,
 > instead of an app window you open.
@@ -149,10 +149,9 @@ those are window-manager powers no browser exposes.
   own frameless-ish window; a third-party utility can pin it always-on-top.
   Zero engineering, most of the benefit.
 
-**Worth noting:** the meeting-gap nudge (item 5) is the part of "desktop app"
-that actually changes behaviour, and it does *not* need any of this — a
-notification from an open window is enough. Probably worth building that
-before spending a native wrapper on ambience.
+**Worth noting:** the meeting-gap nudge has shipped, and needed none of this —
+a notification from an open window was enough. What a wrapper would add is
+ambience only: a window that sits on the desktop rather than being opened.
 
 ---
 
