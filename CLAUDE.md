@@ -12,12 +12,16 @@ https://prithviguru.github.io/zen-prith/.
   phones keep serving the old version.
 - **Storage keys** are all `zen-*` in `localStorage`:
   `zen-meditation-log` (date → `{sessions: [{rating, minutes, at}]}`), `zen-weekly-goal`,
-  `zen-goal-history` (goal changes, by week), `zen-name`, `zen-timer`,
-  `zen-sound`.
+  `zen-goal-history` (goal changes, by week), `zen-name`, `zen-onboarded`,
+  `zen-timer`, `zen-sound`.
   `zen-meditation-days` is the legacy v1 key, migrated on load.
 - **One person per install** — family members share the same URL, so any
-  personalization (name, goal) is per-browser and prompted on first run.
-  Never hard-code personal details into the app.
+  personalization (name, goal) is per-browser and collected by the onboarding
+  flow on first run. Never hard-code personal details into the app.
+- **Onboarding runs once, on a genuinely new install.** It is gated on
+  `zen-onboarded` *and* `zen-name` being unset, so nobody already using Zen is
+  ever shown it. It writes nothing until the last step — an abandoned run
+  leaves no half-set name or goal and simply asks again.
 - **Verify in a real browser** (Playwright + the pre-installed Chromium)
   before shipping, rather than reasoning about the DOM.
 
