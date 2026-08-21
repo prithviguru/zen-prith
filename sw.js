@@ -8,7 +8,7 @@
 //
 // Offline still works: a failed page fetch falls back to the cached copy.
 
-const CACHE = "zen-v24";
+const CACHE = "zen-v25";
 const SHELL = [
   "./",
   "./index.html",

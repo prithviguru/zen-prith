@@ -478,22 +478,37 @@
   }
   .day.done:hover { background: rgba(232, 228, 220, 0.07); }
 
-  .day.r-good::after,
-  .day.r-okay::after,
-  .day.r-rough::after {
-    content: "";
+  .dots {
     position: absolute;
     left: 50%;
     bottom: 4.5px;
     transform: translateX(-50%);
+    display: flex;
+    gap: 2px;
+  }
+
+  .sdot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
+    /* Unrated: an outline, the same thing an unrated day has always said. */
+    box-shadow: inset 0 0 0 1.3px rgba(232, 228, 220, 0.5);
   }
+  .dots:has(.sdot + .sdot) .sdot { width: 5px; height: 5px; }
+  .sdot.r-good  { background: var(--r-good);  box-shadow: none; }
+  .sdot.r-okay  { background: var(--r-okay);  box-shadow: none; }
+  .sdot.r-rough { background: var(--r-rough); box-shadow: none; }
 
-  .day.r-good::after  { background: var(--r-good); }
-  .day.r-okay::after  { background: var(--r-okay); }
-  .day.r-rough::after { background: var(--r-rough); }
+  /* More than three: a leading tick says the row is truncated. */
+  .dots.many::before {
+    content: "";
+    align-self: center;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: rgba(232, 228, 220, 0.35);
+    margin-right: 1px;
+  }
 
   .day.pop { animation: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
 
@@ -634,7 +649,58 @@
 
 
 
-  /* ---------- session length ---------- */
+  /* ---------- the day's sessions ---------- */
+  .slist { display: flex; flex-direction: column; gap: 7px; margin: -4px 0 12px; }
+  .slist:empty { display: none; }
+
+  .srow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px 13px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .srow:hover { border-color: rgba(255, 255, 255, 0.16); background: var(--surface-2); }
+  .srow.editing { border-color: rgba(163, 177, 138, 0.5); background: rgba(163, 177, 138, 0.06); }
+
+  .srow .when { min-width: 56px; text-align: left; color: var(--text-faint); font-size: 11px; }
+  .srow .what { color: var(--text-dim); }
+  /* LABELS are lower case for speech ("meditated, not great"); on screen the
+     row should read as a label. */
+  .srow .what::first-letter { text-transform: uppercase; }
+  /* Not .len — that belongs to the timer's length chips, and the styles collide. */
+  .srow .mins {
+    margin-left: auto;
+    color: var(--text-dim);
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .add-session {
+    width: 100%;
+    margin-bottom: 14px;
+    padding: 10px;
+    background: none;
+    border: 1px dashed rgba(232, 228, 220, 0.16);
+    border-radius: 12px;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 11.5px;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .add-session:hover { color: var(--text); border-color: rgba(232, 228, 220, 0.3); }
+
+    /* ---------- session length ---------- */
   .dur-label {
     margin: -10px 0 9px;
     text-align: center;
@@ -823,7 +889,7 @@
         <span id="week-label">This week</span>
       </button>
       <div class="stat"><b id="stat-month">0</b><span>This month</span></div>
-      <div class="stat"><b id="stat-good">0</b><span>Good days</span></div>
+      <div class="stat"><b id="stat-good">0</b><span>Good sessions</span></div>
     </section>
 
     <button class="begin" id="begin-btn">
@@ -852,9 +918,11 @@
     <div class="sheet-handle" aria-hidden="true"></div>
     <p class="sheet-date" id="sheet-date"></p>
     <h2 class="sheet-title" id="sheet-title">How was your session today?</h2>
-    <p class="dur-label">How long?</p>
+    <div class="slist" id="slist"></div>
+    <button class="add-session" id="add-session">+ Add another session</button>
+    <p class="dur-label" id="dur-label">How long?</p>
     <div class="dur-row" id="dur-row"></div>
-    <div class="opts">
+    <div class="opts" id="opts">
       <button class="opt" data-rating="good"><i class="dot-sw sw-good"></i>Good</button>
       <button class="opt" data-rating="okay"><i class="dot-sw sw-okay"></i>Okay</button>
       <button class="opt" data-rating="rough"><i class="dot-sw sw-rough"></i>Not great</button>
@@ -949,6 +1017,8 @@
   let sheetKey = null;   // date currently open in the rating sheet
   let selMinutes = null; // length chosen in the sheet, null = not recorded
   let selRating = null;  // rating chosen in the sheet, null = none
+  let editIndex = null;  // null = the day's list, -1 = new, 0.. = that session
+  let pendingAt = null;  // when a timed sit began, so it logs its start time
   let durExpanded = false; // "More" tapped: show the full set of lengths
   let justRated = null;  // date to pop-animate on next render
 
@@ -956,12 +1026,21 @@
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        // v2 stored a bare rating string; v3 stores { rating, minutes }.
+        // Three shapes have existed: v2 a bare rating string, v3 a single
+        // { rating, minutes }, v4 a day holding a list of sessions. Anything
+        // older becomes that day's first and only session.
         const parsed = JSON.parse(raw) || {};
         let changed = false;
         for (const k in parsed) {
-          if (typeof parsed[k] === "string") {
-            parsed[k] = { rating: parsed[k] };
+          const v = parsed[k];
+          if (typeof v === "string") {
+            parsed[k] = { sessions: [{ rating: v }] };
+            changed = true;
+          } else if (v && !Array.isArray(v.sessions)) {
+            const s = {};
+            if (v.rating) s.rating = v.rating;
+            if (v.minutes) s.minutes = v.minutes;
+            parsed[k] = { sessions: [s] };
             changed = true;
           }
         }
@@ -972,7 +1051,7 @@
       const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY));
       if (Array.isArray(legacy) && legacy.length) {
         const migrated = {};
-        for (const d of legacy) migrated[d] = { rating: "okay" };
+        for (const d of legacy) migrated[d] = { sessions: [{ rating: "okay" }] };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
         return migrated;
       }
@@ -982,6 +1061,36 @@
 
   function save() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(log));
+  }
+
+  /* ---------- days and sessions ----------
+     A day holds a list of sessions. The weekly goal counts days, not
+     sessions — two sessions on Monday shouldn't buy Tuesday off — so
+     everything that feeds the goal goes through sessionsOn().length > 0,
+     and switching the goal to sessions later means counting them instead. */
+  function sessionsOn(k) {
+    const day = log[k];
+    return (day && Array.isArray(day.sessions)) ? day.sessions : [];
+  }
+
+  function setSessions(k, list) {
+    if (list.length) log[k] = { sessions: list };
+    else delete log[k];
+  }
+
+  // Sessions are kept in the order they happened, so a day reads top to bottom.
+  function sortSessions(list) {
+    return list.slice().sort((a, b) => (a.at || "") < (b.at || "") ? -1 : 1);
+  }
+
+  function clockOf(session) {
+    if (!session.at) return "";
+    const d = new Date(session.at);
+    if (isNaN(d)) return "";
+    let h = d.getHours();
+    const suffix = h < 12 ? "am" : "pm";
+    h = h % 12 || 12;
+    return `${h}:${String(d.getMinutes()).padStart(2, "0")} ${suffix}`;
   }
 
   function key(y, m, d) {
@@ -1050,6 +1159,31 @@
     localStorage.setItem(GOAL_KEY, String(goal));
   }
 
+  // One dot per session, to three; beyond that the count matters more than
+  // the shades, and four dots under a date is a smudge.
+  function sessionDots(sessions) {
+    const wrap = document.createElement("span");
+    wrap.className = "dots";
+    for (const s of sessions.slice(0, 3)) {
+      const dot = document.createElement("i");
+      dot.className = "sdot" + (s.rating ? " r-" + s.rating : "");
+      wrap.appendChild(dot);
+    }
+    if (sessions.length > 3) wrap.classList.add("many");
+    return wrap;
+  }
+
+  function describeDay(sessions) {
+    if (!sessions.length) return "not marked";
+    const parts = sessions.map((s) => {
+      const bits = [s.rating ? LABELS[s.rating] : "no rating"];
+      if (s.minutes) bits.push(`${s.minutes} minutes`);
+      if (clockOf(s)) bits.unshift(clockOf(s));
+      return bits.join(", ");
+    });
+    return `${sessions.length} session${sessions.length > 1 ? "s" : ""} — ${parts.join("; ")}`;
+  }
+
   // Sessions in the current week (Sunday–Saturday, matching the calendar).
   function weekCount() {
     const t = new Date();
@@ -1057,7 +1191,7 @@
     let n = 0;
     for (let i = 0; i < 7; i++) {
       const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
-      if (log[key(d.getFullYear(), d.getMonth(), d.getDate())]) n++;
+      if (sessionsOn(key(d.getFullYear(), d.getMonth(), d.getDate())).length) n++;
     }
     return n;
   }
@@ -1095,13 +1229,15 @@
     for (let d = 1; d <= total; d++) {
       const el = document.createElement("button");
       const k = key(y, m, d);
-      const entry = log[k];
-      const rating = entry && entry.rating;
+      const sessions = sessionsOn(k);
       const isFuture = new Date(y, m, d) > now;
       el.className = "day";
       el.textContent = d;
       if (k === todayKey()) el.classList.add("today");
-      if (entry) el.classList.add("done", rating ? "r-" + rating : "r-none");
+      if (sessions.length) {
+        el.classList.add("done");
+        el.appendChild(sessionDots(sessions));
+      }
       if (k === justRated) {
         el.classList.add("pop");
         el.addEventListener("animationend", () => el.classList.remove("pop"), { once: true });
@@ -1111,9 +1247,7 @@
         el.disabled = true;
         el.setAttribute("aria-label", `${MONTHS[m]} ${d} — future`);
       } else {
-        const mins = entry && entry.minutes ? `, ${entry.minutes} minutes` : "";
-        const state = entry ? "meditated" + (rating ? ", " + LABELS[rating] : "") + mins : "not marked";
-        el.setAttribute("aria-label", `${MONTHS[m]} ${d} — ${state}`);
+        el.setAttribute("aria-label", `${MONTHS[m]} ${d} — ${describeDay(sessions)}`);
         el.addEventListener("click", () => openSheet(k, `${MONTHS[m]} ${d}, ${y}`));
       }
       grid.appendChild(el);
@@ -1143,7 +1277,7 @@
     let n = 0;
     for (let i = 0; i < 7; i++) {
       const c = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
-      if (log[key(c.getFullYear(), c.getMonth(), c.getDate())]) n++;
+      if (sessionsOn(key(c.getFullYear(), c.getMonth(), c.getDate())).length) n++;
     }
     return { n, start };
   }
@@ -1167,8 +1301,9 @@
     let monthCount = 0, goodCount = 0;
     for (const k in log) {
       if (!k.startsWith(prefix)) continue;
-      monthCount++;
-      if (log[k].rating === "good") goodCount++;
+      const sessions = sessionsOn(k);
+      if (sessions.length) monthCount++;          // days, matching the goal
+      for (const s of sessions) if (s.rating === "good") goodCount++;
     }
     document.getElementById("stat-month").textContent = monthCount;
     document.getElementById("stat-good").textContent = goodCount;
@@ -1229,16 +1364,70 @@
 
   function openSheet(k, label, presetMinutes) {
     sheetKey = k;
-    const e = log[k];
-    selMinutes = presetMinutes != null ? presetMinutes : (e && e.minutes) || null;
-    durExpanded = false;
     document.getElementById("sheet-date").textContent = label;
-    selRating = (e && e.rating) || null;
-    markOptSelection();
-    renderDurs();
-    removeBtn.style.display = e ? "block" : "none";
+    const sessions = sessionsOn(k);
+    // A day with sessions opens on its list; an empty day, or one arriving
+    // from the timer, opens straight into recording.
+    if (sessions.length && presetMinutes == null) editIndex = null;
+    else editIndex = -1;
+    editSession(editIndex, presetMinutes);
     backdrop.classList.add("open");
     sheet.classList.add("open");
+  }
+
+  // editIndex: null shows the day's list, -1 records a new session,
+  // 0.. edits the session at that position.
+  function editSession(index, presetMinutes) {
+    editIndex = index;
+    const sessions = sortSessions(sessionsOn(sheetKey));
+    const editing = index !== null;
+    const current = index >= 0 ? sessions[index] : null;
+
+    selMinutes = presetMinutes != null ? presetMinutes : (current && current.minutes) || null;
+    selRating = (current && current.rating) || null;
+    durExpanded = false;
+    markOptSelection();
+    renderDurs();
+    renderSessions(sessions);
+
+    document.getElementById("sheet-title").textContent = titleFor(sessions, index);
+    document.getElementById("add-session").style.display =
+      !editing && sessions.length ? "block" : "none";
+    for (const id of ["dur-label", "dur-row", "opts", "sheet-save"]) {
+      const el = document.getElementById(id) || document.querySelector("." + id);
+      if (el) el.style.display = editing ? "" : "none";
+    }
+    // null >= 0 is true, so ask explicitly whether a session is being edited.
+    removeBtn.style.display = typeof index === "number" && index >= 0 ? "block" : "none";
+    removeBtn.textContent = "Remove this session";
+  }
+
+  function titleFor(sessions, index) {
+    if (index === null) {
+      return sessions.length === 1 ? "One session today" : `${sessions.length} sessions today`;
+    }
+    if (index >= 0) return "Edit this session";
+    return sessions.length ? "Another session" : "How was your session today?";
+  }
+
+  function renderSessions(sessions) {
+    const list = document.getElementById("slist");
+    list.innerHTML = "";
+    // While recording, the list would compete with the controls below it.
+    if (editIndex !== null) return;
+    sessions.forEach((s, i) => {
+      const row = document.createElement("button");
+      row.className = "srow";
+      const when = clockOf(s);
+      row.innerHTML =
+        `<span class="when">${when || "&mdash;"}</span>` +
+        `<i class="sdot${s.rating ? " r-" + s.rating : ""}"></i>` +
+        `<span class="what">${s.rating ? LABELS[s.rating] : "No rating"}</span>` +
+        `<span class="mins">${s.minutes ? s.minutes + " min" : ""}</span>`;
+      row.setAttribute("aria-label", `Edit session ${i + 1}`);
+      row.addEventListener("click", () => editSession(i));
+      list.appendChild(row);
+    });
   }
 
   /* ---------- session length ---------- */
@@ -1340,6 +1529,8 @@
 
   function closeSheet() {
     sheetKey = null;
+    editIndex = null;
+    pendingAt = null;
     backdrop.classList.remove("open");
     sheet.classList.remove("open");
     goalSheet.classList.remove("open");
@@ -1365,22 +1556,37 @@
   // Saving with nothing chosen still logs the day: a session counts on its
   // own, with or without an opinion about how it went.
   document.getElementById("sheet-save").addEventListener("click", () => {
-    if (!sheetKey) return;
-    const e = {};
-    if (selRating) e.rating = selRating;
-    if (selMinutes) e.minutes = selMinutes;
-    log[sheetKey] = e;
+    if (!sheetKey || editIndex === null) return;
+    const sessions = sortSessions(sessionsOn(sheetKey));
+    const session = editIndex >= 0
+      ? { ...sessions[editIndex] }
+      : { at: pendingAt || new Date().toISOString() };
+    pendingAt = null;
+    if (selRating) session.rating = selRating;
+    else delete session.rating;
+    if (selMinutes) session.minutes = selMinutes;
+    else delete session.minutes;
+
+    if (editIndex >= 0) sessions[editIndex] = session;
+    else sessions.push(session);
+    setSessions(sheetKey, sortSessions(sessions));
     justRated = sheetKey;
     save();
     closeSheet();
     render();
   });
 
+  document.getElementById("add-session").addEventListener("click", () => editSession(-1));
+
   removeBtn.addEventListener("click", () => {
-    if (!sheetKey) return;
-    delete log[sheetKey];
+    if (!sheetKey || typeof editIndex !== "number" || editIndex < 0) return;
+    const sessions = sortSessions(sessionsOn(sheetKey));
+    sessions.splice(editIndex, 1);
+    setSessions(sheetKey, sessions);
     save();
-    closeSheet();
+    // Removing the last one empties the day, so there is nothing to go back to.
+    if (sessions.length) editSession(null);
+    else closeSheet();
     render();
   });
 
@@ -1554,6 +1760,7 @@
     const minutes = completed && timer.targetMin > 0
       ? timer.targetMin
       : Math.max(1, Math.round(elapsed / 60000));
+    pendingAt = new Date(Date.now() - elapsed).toISOString(); // when the sit began
     timer = null;
     localStorage.removeItem(TIMER_KEY);
     releaseWakeLock();

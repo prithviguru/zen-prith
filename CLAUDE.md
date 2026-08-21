@@ -11,7 +11,7 @@ https://prithviguru.github.io/zen-prith/.
 - **Bump `CACHE` in `sw.js`** on every user-facing change, or installed
   phones keep serving the old version.
 - **Storage keys** are all `zen-*` in `localStorage`:
-  `zen-meditation-log` (date → `{rating, minutes}`), `zen-weekly-goal`,
+  `zen-meditation-log` (date → `{sessions: [{rating, minutes, at}]}`), `zen-weekly-goal`,
   `zen-goal-history` (goal changes, by week), `zen-name`, `zen-timer`,
   `zen-sound`.
   `zen-meditation-days` is the legacy v1 key, migrated on load.
