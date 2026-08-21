@@ -847,6 +847,163 @@
   .name-input::placeholder { color: var(--text-faint); }
   .name-input:focus { border-color: rgba(163, 177, 138, 0.5); }
 
+  /* ---------- onboarding ----------
+     A full screen rather than a sheet: first run is the one moment there is
+     nothing behind to look at, and a sheet over an empty calendar reads as an
+     interruption rather than a welcome. */
+  .onboard {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: none;
+    flex-direction: column;
+    background: var(--bg);
+    background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(163, 177, 138, 0.09), transparent);
+    padding: calc(28px + env(safe-area-inset-top)) 22px calc(20px + env(safe-area-inset-bottom));
+  }
+  .onboard.open { display: flex; }
+
+  .ob-bar {
+    display: flex;
+    justify-content: center;
+    gap: 7px;
+  }
+
+  .ob-pip {
+    width: 5px;
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(232, 228, 220, 0.16);
+    transition: background 0.35s, width 0.35s;
+  }
+  .ob-pip.on { width: 16px; background: var(--accent); }
+
+  .ob-stage {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  .ostep { display: none; width: 100%; text-align: center; }
+  .ostep.on {
+    display: block;
+    animation: obIn 0.45s cubic-bezier(0.32, 0.72, 0.35, 1);
+  }
+
+  @keyframes obIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .ob-kicker {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .ob-title {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 30px;
+    font-weight: 500;
+    line-height: 1.2;
+    margin: 6px 0 16px;
+  }
+
+  .ob-lede {
+    color: var(--text-dim);
+    font-size: 13.5px;
+    line-height: 1.65;
+  }
+  .ob-lede b { color: var(--text); font-weight: 500; }
+
+  .ob-note {
+    margin-top: 16px;
+    color: var(--text-faint);
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+
+  /* Each row pairs a real calendar figure with the sentence explaining it —
+     built from the same classes the calendar uses, so the walkthrough can
+     never drift from what the app actually draws. */
+  .ob-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    text-align: left;
+  }
+  .ob-list li { display: flex; align-items: center; gap: 14px; }
+  .ob-list p {
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--text-dim);
+  }
+  .ob-list b { color: var(--text); font-weight: 500; }
+
+  .ob-fig {
+    position: relative;
+    flex: none;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Not .ring — that is the timer's progress ring, which is rotated. */
+  .ob-fig.ob-ring {
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1.5px rgba(232, 228, 220, 0.22);
+  }
+  .ob-fig.mins { font-size: 11.5px; color: var(--text-dim); }
+  /* The figure ring is a touch smaller than a calendar day, so the dots need
+     to sit a little higher to stay clear of the edge. */
+  .ob-fig .dots { bottom: 6px; }
+
+  /* The rating swatches sit outside .dots on purpose: .dots shrinks its dots
+     when there are several, and here all three should stay full size. */
+  .ob-swatch { display: flex; gap: 4px; }
+
+  .ob-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  .ob-back {
+    flex: none;
+    padding: 13px 14px;
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .ob-back:hover { color: var(--text-dim); }
+  .ob-back[hidden] { display: none; }
+
+  .ob-next { flex: 1; margin-top: 0; }
+
+  .ob-skip {
+    width: 100%;
+    max-width: 400px;
+    margin: 2px auto 0;
+  }
+  .ob-skip[hidden] { display: none; }
+
   /* ---------- footer legend ---------- */
   footer {
     display: flex;
@@ -983,12 +1140,92 @@
 
   <div class="sheet" id="name-sheet" role="dialog" aria-modal="true" aria-labelledby="name-title">
     <div class="sheet-handle" aria-hidden="true"></div>
-    <p class="sheet-date" id="name-kicker">Welcome</p>
+    <p class="sheet-date">Your name</p>
     <h2 class="sheet-title" id="name-title">What should we call you?</h2>
     <input class="name-input" id="name-input" type="text" maxlength="24"
-           placeholder="Your name" autocomplete="given-name" enterkeyhint="done" />
-    <button class="goal-done" id="name-save">Begin</button>
-    <button class="sheet-remove" id="name-skip">Skip</button>
+           placeholder="Your name" autocomplete="given-name"
+           autocapitalize="words" enterkeyhint="done" />
+    <button class="goal-done" id="name-save">Save</button>
+  </div>
+
+  <div class="onboard" id="onboard" role="dialog" aria-modal="true" aria-label="Welcome to Zen">
+    <div class="ob-bar" id="ob-bar" aria-hidden="true"></div>
+
+    <div class="ob-stage">
+      <section class="ostep" aria-label="Welcome">
+        <div class="breath" aria-hidden="true"></div>
+        <h1 class="ob-title">Zen</h1>
+        <p class="ob-lede">
+          A quiet place to keep your practice.<br />
+          Nothing to sign up for — everything stays on this device.
+        </p>
+      </section>
+
+      <section class="ostep" aria-label="Your name">
+        <p class="ob-kicker">Hello</p>
+        <h2 class="ob-title">What should we call you?</h2>
+        <input class="name-input" id="ob-name" type="text" maxlength="24"
+               placeholder="Your name" autocomplete="given-name"
+               autocapitalize="words" enterkeyhint="next" />
+        <p class="ob-note">Only used for the greeting at the top.</p>
+      </section>
+
+      <section class="ostep" aria-label="Weekly goal">
+        <p class="ob-kicker">Weekly goal</p>
+        <h2 class="ob-title">How many days a week?</h2>
+        <div class="stepper">
+          <button class="step-btn" id="ob-minus" aria-label="Decrease goal">&minus;</button>
+          <span class="goal-num" id="ob-goal">5</span>
+          <button class="step-btn" id="ob-plus" aria-label="Increase goal">+</button>
+        </div>
+        <p class="ob-note">
+          Days, not sessions — two sits on Monday don't cover Tuesday.
+          Change it any time by tapping the tile.
+        </p>
+      </section>
+
+      <section class="ostep" aria-label="How it works">
+        <p class="ob-kicker">How it works</p>
+        <h2 class="ob-title">What you can log</h2>
+        <ul class="ob-list">
+          <li>
+            <span class="ob-fig ob-ring" aria-hidden="true">14<span class="dots"><i class="sdot"></i></span></span>
+            <p><b>Tap any day</b> up to today to log a session. That's all that's
+              required — a rating and a length are both optional.</p>
+          </li>
+          <li>
+            <span class="ob-fig" aria-hidden="true"><span class="ob-swatch"><i class="sdot r-good"></i><i class="sdot r-okay"></i><i class="sdot r-rough"></i></span></span>
+            <p><b>Rate how it felt</b> — good, okay or not great. It shows as a
+              small dot inside the day.</p>
+          </li>
+          <li>
+            <span class="ob-fig ob-ring mins" aria-hidden="true">12m</span>
+            <p><b>Record the minutes</b>, or press <b>Begin session</b> and let
+              the timer count them for you.</p>
+          </li>
+          <li>
+            <span class="ob-fig ob-ring" aria-hidden="true">18<span class="dots"><i class="sdot r-good"></i><i class="sdot r-okay"></i><i class="sdot"></i></span></span>
+            <p><b>Sat more than once?</b> Log as many sessions in a day as you
+              like — a dot each.</p>
+          </li>
+        </ul>
+      </section>
+
+      <section class="ostep" aria-label="Ready">
+        <div class="breath" aria-hidden="true"></div>
+        <h2 class="ob-title" id="ob-ready">You're all set</h2>
+        <p class="ob-lede">
+          Press <b>Begin session</b> when you're ready to sit, or tap today on
+          the calendar to log one you've already done.
+        </p>
+      </section>
+    </div>
+
+    <div class="ob-actions">
+      <button class="ob-back" id="ob-back" hidden>Back</button>
+      <button class="goal-done ob-next" id="ob-next">Continue</button>
+    </div>
+    <button class="sheet-remove ob-skip" id="ob-skip">Skip</button>
   </div>
 
 <script>
@@ -998,6 +1235,7 @@
   const GOAL_KEY = "zen-weekly-goal";
   const GOALS_KEY = "zen-goal-history";
   const NAME_KEY = "zen-name";
+  const ONBOARD_KEY = "zen-onboarded";
   const TIMER_KEY = "zen-timer";
   const MONTHS = ["January","February","March","April","May","June",
                   "July","August","September","October","November","December"];
@@ -1655,7 +1893,6 @@
   /* ---------- personal greeting ---------- */
   const nameSheet = document.getElementById("name-sheet");
   const nameInput = document.getElementById("name-input");
-  const nameSkip = document.getElementById("name-skip");
 
   function renderGreeting() {
     const h = new Date().getHours();
@@ -1665,10 +1902,9 @@
     el.setAttribute("aria-label", name ? `${partOfDay}, ${name}. Change your name.` : "Set your name");
   }
 
-  function openNameSheet(firstRun) {
-    document.getElementById("name-kicker").textContent = firstRun ? "Welcome" : "Your name";
-    document.getElementById("name-save").textContent = firstRun ? "Begin" : "Save";
-    nameSkip.style.display = firstRun ? "block" : "none";
+  // Only ever reached by tapping the greeting — first run belongs to
+  // onboarding now, so this sheet is purely for changing a name later.
+  function openNameSheet() {
     nameInput.value = name;
     backdrop.classList.add("open");
     nameSheet.classList.add("open");
@@ -1682,12 +1918,8 @@
     closeSheet();
   }
 
-  document.getElementById("greeting").addEventListener("click", () => openNameSheet(false));
+  document.getElementById("greeting").addEventListener("click", openNameSheet);
   document.getElementById("name-save").addEventListener("click", saveName);
-  nameSkip.addEventListener("click", () => {
-    localStorage.setItem(NAME_KEY, "");
-    closeSheet();
-  });
   nameInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") saveName();
   });
@@ -1858,8 +2090,87 @@
     if (!document.hidden) renderGreeting();
   });
 
-  // First run: ask who this is.
-  if (localStorage.getItem(NAME_KEY) === null) openNameSheet(true);
+  /* ---------- onboarding ----------
+     Runs once, on a genuinely new install. Existing installs already have a
+     name recorded, so nobody who has been using Zen is shown this. Nothing is
+     written until the last step: a run that is abandoned halfway leaves no
+     half-set name or goal behind, and simply asks again next time. */
+  const onboard = document.getElementById("onboard");
+  const obSteps = Array.from(onboard.querySelectorAll(".ostep"));
+  const obName = document.getElementById("ob-name");
+  const obBack = document.getElementById("ob-back");
+  const obNext = document.getElementById("ob-next");
+  const obSkip = document.getElementById("ob-skip");
+  const obGoalNum = document.getElementById("ob-goal");
+  const NAME_STEP = 1;
+  const LAST_STEP = obSteps.length - 1;
+  let obStep = 0;
+  let obGoal = goal;
+
+  // Build the progress pips from the steps themselves, so adding a screen
+  // never means remembering to add a dot.
+  const obPips = obSteps.map(() => {
+    const pip = document.createElement("i");
+    pip.className = "ob-pip";
+    document.getElementById("ob-bar").appendChild(pip);
+    return pip;
+  });
+
+  function showObStep(i) {
+    obStep = Math.min(LAST_STEP, Math.max(0, i));
+    obSteps.forEach((s, n) => {
+      s.classList.toggle("on", n === obStep);
+      s.setAttribute("aria-hidden", n === obStep ? "false" : "true");
+    });
+    obPips.forEach((p, n) => p.classList.toggle("on", n === obStep));
+    obBack.hidden = obStep === 0;
+    obSkip.hidden = obStep === LAST_STEP;
+    obNext.textContent = obStep === LAST_STEP ? "Begin" : "Continue";
+    if (obStep === NAME_STEP) setTimeout(() => obName.focus(), 350);
+    if (obStep === LAST_STEP) {
+      const who = obName.value.trim();
+      document.getElementById("ob-ready").textContent =
+        who ? `You're all set, ${who}` : "You're all set";
+    }
+  }
+
+  function setObGoal(g) {
+    obGoal = Math.min(7, Math.max(1, g));
+    obGoalNum.textContent = obGoal;
+  }
+
+  function finishOnboarding(keep) {
+    if (keep) {
+      name = obName.value.trim().slice(0, 24);
+      setGoal(obGoal);
+    } else {
+      // Skipping still answers the name question — with "no name, thanks" —
+      // so the app doesn't ask again on the next launch.
+      name = "";
+    }
+    localStorage.setItem(NAME_KEY, name);
+    localStorage.setItem(ONBOARD_KEY, "1");
+    onboard.classList.remove("open");
+    renderGreeting();
+  }
+
+  obNext.addEventListener("click", () => {
+    if (obStep === LAST_STEP) finishOnboarding(true);
+    else showObStep(obStep + 1);
+  });
+  obBack.addEventListener("click", () => showObStep(obStep - 1));
+  obSkip.addEventListener("click", () => finishOnboarding(false));
+  obName.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") showObStep(obStep + 1);
+  });
+  document.getElementById("ob-minus").addEventListener("click", () => setObGoal(obGoal - 1));
+  document.getElementById("ob-plus").addEventListener("click", () => setObGoal(obGoal + 1));
+
+  if (localStorage.getItem(ONBOARD_KEY) === null && localStorage.getItem(NAME_KEY) === null) {
+    setObGoal(goal);
+    showObStep(0);
+    onboard.classList.add("open");
+  }
 
   resumeTimer();
 
