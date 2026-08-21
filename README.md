@@ -44,8 +44,13 @@ One breath at a time.
 - **The stats follow the month you're viewing.** On the current month the
   first figure reads *This week*; navigate away and it becomes *Weeks met* for
   that month, since "this week" means nothing in a month you're not in.
-- **Personal greeting** — a time-aware "Good morning, <name>" header. Each
-  install asks for a name on first open; tap the greeting to change it.
+- **Onboarding** — a new install opens on a short, five-screen welcome: your
+  name, how many days a week you're aiming for, and a walkthrough of what can
+  be logged, drawn with the calendar's own dots so it can't drift from the
+  real thing. Skippable, and nothing is saved until the last screen, so an
+  abandoned run leaves nothing behind. Anyone already using Zen never sees it.
+- **Personal greeting** — a time-aware "Good morning, <name>" header. The name
+  is asked for during onboarding; tap the greeting to change it later.
 - **Monthly counts** at a glance — days meditated, and Good-rated *sessions*,
   for the month being viewed. The three figures sit straight on the page,
   divided by hairlines rather than boxed in cards: a rounded surface in Zen
