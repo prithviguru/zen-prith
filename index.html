@@ -217,23 +217,20 @@
   .act:active { transform: scale(0.985); }
   .act svg { flex: none; }
 
-  /* Sitting is the thing the app is for, so it keeps the sage fill and
-     logging stands beside it as the quieter of the two. */
-  .begin {
-    background: var(--accent-soft);
+  /* Both outlined, neither filled. A filled button next to an outlined one
+     ranked them, and these are two ways of doing the same thing rather than a
+     main action and a lesser one. Transparent also lets the page's own wash
+     show through, which a filled panel was covering up. */
+  .begin,
+  .log-btn {
+    background: transparent;
     border-color: rgba(163, 177, 138, 0.28);
     color: var(--accent);
   }
-  .begin:hover { background: rgba(163, 177, 138, 0.2); }
-
-  .log-btn {
-    background: var(--surface);
-    border-color: var(--line);
-    color: var(--text-dim);
-  }
+  .begin:hover,
   .log-btn:hover {
-    color: var(--text);
-    border-color: rgba(255, 255, 255, 0.16);
+    background: var(--accent-soft);
+    border-color: rgba(163, 177, 138, 0.45);
   }
 
   /* ---------- timer / stopwatch picker ---------- */
