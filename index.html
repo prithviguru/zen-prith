@@ -105,44 +105,47 @@
   }
 
   /* ---------- stats ---------- */
+  /* ---------- stats ----------
+     No cards. A rounded surface in this app means "you can press this", and
+     three facts wearing the same shape as the buttons made the page read as
+     five things to press. The numbers now sit straight on the page, divided
+     by the same hairline the calendar uses for its week column. */
   .stats {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    gap: 10px;
   }
 
-  /* Flex column rather than plain block: a <button> tile would otherwise
-     center its content vertically and sit lower than the <div> tiles. */
   .stat {
-    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 16px 8px 14px;
+    gap: 6px;
+    padding: 2px 4px;
+    background: none;
+    border: none;
     text-align: center;
   }
+  .stat + .stat { border-left: 1px solid var(--line); }
 
-  /* The weekly-goal tile is the same tile, but tappable to edit the goal. */
+  /* The weekly-goal figure is still tappable to edit the goal. Without a card
+     to give that away, the pencil beside the label is the only affordance —
+     so it sits inline with the words rather than off in a corner. */
   .stat-btn {
     font-family: inherit;
     color: var(--text);
     cursor: pointer;
-    transition: border-color 0.25s, box-shadow 0.25s, background 0.2s;
+    transition: opacity 0.2s;
   }
-  .stat-btn:hover { background: var(--surface-2); }
-  .stat-btn.met {
-    border-color: rgba(163, 177, 138, 0.4);
-    box-shadow: 0 0 20px rgba(163, 177, 138, 0.1);
-  }
+  .stat-btn:hover { opacity: 0.78; }
+
+  /* Meeting the goal used to light up a tile border. With no border, the
+     number itself glows and its label turns sage. */
+  .stat-btn.met b { text-shadow: 0 0 18px rgba(163, 177, 138, 0.45); }
+  .stat-btn.met > span { color: var(--accent); }
 
   .week-pencil {
-    position: absolute;
-    top: 10px;
-    right: 10px;
+    flex: none;
     color: var(--text-faint);
     transition: color 0.2s;
   }
@@ -174,8 +177,10 @@
 
   /* Direct child only — the count inside <b> is a span too. */
   .stat > span {
-    display: block;
-    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
     font-size: 10px;
     font-weight: 400;
     letter-spacing: 0.14em;
@@ -183,28 +188,53 @@
     color: var(--text-dim);
   }
 
-  /* ---------- begin session ---------- */
-  .begin {
+  /* ---------- actions ----------
+     Both live at the foot of the page, under the calendar they act on: you
+     look at the month, then decide to sit or to record one you've done. */
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .act {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 9px;
+    gap: 8px;
     width: 100%;
-    padding: 15px;
-    background: var(--accent-soft);
-    border: 1px solid rgba(163, 177, 138, 0.28);
+    padding: 15px 8px;
     border-radius: var(--radius);
-    color: var(--accent);
+    border: 1px solid transparent;
     font-family: inherit;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
-    letter-spacing: 0.16em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     cursor: pointer;
-    transition: background 0.2s, transform 0.15s;
+    transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.15s;
+  }
+  .act:active { transform: scale(0.985); }
+  .act svg { flex: none; }
+
+  /* Sitting is the thing the app is for, so it keeps the sage fill and
+     logging stands beside it as the quieter of the two. */
+  .begin {
+    background: var(--accent-soft);
+    border-color: rgba(163, 177, 138, 0.28);
+    color: var(--accent);
   }
   .begin:hover { background: rgba(163, 177, 138, 0.2); }
-  .begin:active { transform: scale(0.985); }
+
+  .log-btn {
+    background: var(--surface);
+    border-color: var(--line);
+    color: var(--text-dim);
+  }
+  .log-btn:hover {
+    color: var(--text);
+    border-color: rgba(255, 255, 255, 0.16);
+  }
 
   /* ---------- timer / stopwatch picker ---------- */
   .mode-label {
@@ -444,7 +474,8 @@
     border: none;
     border-radius: 50%;
     background: transparent;
-    color: var(--text);
+    /* Dim by default so today can be the bright one — see .day.today. */
+    color: var(--text-dim);
     font-family: inherit;
     font-size: 14px;
     font-weight: 400;
@@ -466,9 +497,15 @@
   .day.future:hover { background: transparent; }
   .day.future:active { transform: none; }
 
-  /* Today is marked by its number, not a dot — the dot slot belongs to the
-     rating now. */
-  .day.today { color: var(--accent); }
+  /* Today wins on lightness, not hue. It used to be sage against bone, which
+     are near-identical in brightness and differ only in colour — the weakest
+     signal at this size, the first to fail in sunlight, and invisible to
+     anyone slightly colour-blind. Today is now the brightest thing in the
+     grid and every other day steps back, which survives all three. */
+  .day.today {
+    color: #fff;
+    font-weight: 600;
+  }
 
   /* Every logged day is the same quiet ring; the rating is a small coloured
      dot inside it, so the calendar stays calm at a glance. */
@@ -847,27 +884,10 @@
   .name-input::placeholder { color: var(--text-faint); }
   .name-input:focus { border-color: rgba(163, 177, 138, 0.5); }
 
-  /* ---------- footer legend ---------- */
-  footer {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 10px 18px;
-    font-size: 11px;
-    font-weight: 300;
-    letter-spacing: 0.06em;
-    color: var(--text-faint);
-  }
-
-  footer span { display: inline-flex; align-items: center; gap: 7px; }
-  /* In the legend the ring would be noise at this size — show just the dot. */
-  footer .dot-sw {
-    width: 8px;
-    height: 8px;
-    box-shadow: none;
-    background: currentColor;
-  }
-  footer .dot-sw::after { display: none; }
+  /* The rating legend that used to sit here is gone. The three buttons in the
+     log sheet are the legend — same dot, same colour, same word — so the
+     footer was repeating itself to anyone who had ever opened a day, and it
+     cost a whole row on a page that needed one back. */
 
   @media (max-width: 380px) {
     .stat b { font-size: 26px; }
@@ -884,18 +904,12 @@
 
     <section class="stats" aria-label="Statistics">
       <button class="stat stat-btn" id="week-card" aria-haspopup="dialog">
-        <svg class="week-pencil" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
         <b><span id="week-count">0</span><i>/</i><em id="week-goal">5</em></b>
-        <span id="week-label">This week</span>
+        <span><span id="week-label">This week</span><svg class="week-pencil" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
       </button>
       <div class="stat"><b id="stat-month">0</b><span>This month</span></div>
       <div class="stat"><b id="stat-good">0</b><span>Good sessions</span></div>
     </section>
-
-    <button class="begin" id="begin-btn">
-      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
-      Begin session
-    </button>
 
     <section class="calendar" aria-label="Calendar">
       <div class="cal-head">
@@ -906,11 +920,16 @@
       <div class="grid" id="grid"></div>
     </section>
 
-    <footer aria-label="Rating legend">
-      <span><i class="dot-sw sw-good"></i>Good</span>
-      <span><i class="dot-sw sw-okay"></i>Okay</span>
-      <span><i class="dot-sw sw-rough"></i>Not great</span>
-    </footer>
+    <section class="actions" aria-label="Actions">
+      <button class="act begin" id="begin-btn">
+        <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        Begin session
+      </button>
+      <button class="act log-btn" id="log-btn" aria-haspopup="dialog">
+        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        Log a session
+      </button>
+    </section>
   </main>
 
   <div class="backdrop" id="backdrop"></div>
@@ -1832,6 +1851,13 @@
   document.getElementById("begin-btn").addEventListener("click", () => {
     backdrop.classList.add("open");
     timerSheet.classList.add("open");
+  });
+
+  // Logging a sit you've already done shouldn't require finding today in the
+  // grid first — that was two steps for the most common thing there is.
+  document.getElementById("log-btn").addEventListener("click", () => {
+    const t = new Date();
+    openSheet(todayKey(), `${MONTHS[t.getMonth()]} ${t.getDate()}, ${t.getFullYear()}`);
   });
 
   document.querySelectorAll(".len").forEach((b) =>

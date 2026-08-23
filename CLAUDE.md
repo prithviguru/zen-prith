@@ -18,6 +18,15 @@ https://prithviguru.github.io/zen-prith/.
 - **One person per install** — family members share the same URL, so any
   personalization (name, goal) is per-browser and prompted on first run.
   Never hard-code personal details into the app.
+- **A rounded surface means "you can press this."** Cards and filled shapes
+  are reserved for controls and the calendar; plain data sits straight on the
+  page, divided by hairlines. When everything wore the same rounded card, a
+  screen with three facts and one action read as five things to press.
+- **Distinguish by lightness, not hue.** Sage-on-bone reads as barely
+  different at small sizes, fails in sunlight, and is invisible to some
+  colour-blind viewers — which is exactly how "today" got lost in the
+  calendar. Colour still carries the *ratings*, where three distinct hues sit
+  side by side and have a legend to lean on.
 - **Verify in a real browser** (Playwright + the pre-installed Chromium)
   before shipping, rather than reasoning about the DOM.
 
