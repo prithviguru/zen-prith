@@ -1077,14 +1077,37 @@
 
   .hooray h2 {
     font-family: "Cormorant Garamond", Georgia, serif;
-    font-size: 38px;
+    font-size: 32px;
     font-weight: 500;
     line-height: 1.08;
   }
-  .hooray h2 em { font-style: italic; color: var(--accent); }
-  .hooray p {
-    margin-top: 10px;
-    font-size: 13px;
+
+  /* The same shape as the week tile — Cormorant, tabular figures, the goal
+     smaller and dimmer than the count — just scaled up to carry the moment.
+     It is the number people already read as "am I there yet"; seeing it
+     resolve to 5/5 is the success, so it leads. */
+  .hooray-score {
+    margin-top: 14px;
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 76px;
+    font-weight: 500;
+    line-height: 1.02;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 42px rgba(163, 177, 138, 0.4);
+  }
+  .hooray-score i,
+  .hooray-score em {
+    font-style: normal;
+    font-size: 48px;
+    margin-left: 2px;
+  }
+  .hooray-score i { color: var(--text-faint); }
+  .hooray-score em { color: var(--text-dim); }
+
+  .hooray-say {
+    margin-top: 12px;
+    font-size: 13.5px;
     letter-spacing: 0.04em;
     color: var(--text-dim);
   }
@@ -1162,8 +1185,11 @@
   <div class="cel-scrim" id="cel-scrim" hidden aria-hidden="true"></div>
   <canvas class="confetti" id="confetti" hidden aria-hidden="true"></canvas>
   <div class="hooray" id="hooray" hidden role="status">
-    <h2>Congrats!<br /><em>You met your weekly goal</em></h2>
-    <p id="hooray-sub">Five days this week</p>
+    <h2>Congrats!</h2>
+    <p class="hooray-score" id="hooray-score">
+      <span id="hooray-count">5</span><i>/</i><em id="hooray-goal">5</em>
+    </p>
+    <p class="hooray-say">You met your weekly goal</p>
   </div>
 
   <div class="backdrop" id="backdrop"></div>
@@ -1973,8 +1999,6 @@
   const hooray = document.getElementById("hooray");
   const scrim = document.getElementById("cel-scrim");
   const cx = confetti.getContext("2d");
-  const WORDS = ["Zero", "One day", "Two days", "Three days", "Four days",
-                 "Five days", "Six days", "Seven days"];
   const FLAKE = ["#9ec27b", "#e0b544", "#d1675a", "#a3b18a", "#e8e4dc"];
   let celebrating = false;
 
@@ -1982,8 +2006,11 @@
     if (celebrating) return;
     celebrating = true;
 
-    document.getElementById("hooray-sub").textContent =
-      `${WORDS[daysThisWeek] || daysThisWeek} this week`;
+    document.getElementById("hooray-count").textContent = daysThisWeek;
+    document.getElementById("hooray-goal").textContent = goal;
+    // The figures are decorative markup; give the live region a plain sentence.
+    document.getElementById("hooray-score").setAttribute(
+      "aria-label", `${daysThisWeek} of ${goal} days this week`);
     scrim.hidden = false;
     hooray.hidden = false;
     scrim.classList.remove("show");
