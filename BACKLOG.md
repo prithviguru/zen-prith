@@ -156,6 +156,91 @@ before spending a native wrapper on ambience.
 
 ---
 
+## 7. Tell people what's new
+
+> Send a note to everyone using Zen when something changes. For now that's
+> two people — me and Appa.
+
+**Status:** not started. Cheapest useful version needs no backend at all.
+
+**The thing to notice first:** `CACHE` in `sw.js` is already bumped on every
+user-facing change, so the app *already* has a version number that means
+"something changed." Nothing new has to be invented to know when to speak.
+
+**Three ways to do it, cheapest first:**
+
+- **An in-app "What's new" sheet.** On load, compare the current version
+  against a stored `zen-seen-version`; if it's behind, show a sheet listing
+  what changed since, then record the new one. No backend, no permissions, no
+  addresses to keep. Reaches exactly the people who open the app — which,
+  for a habit tracker they open daily, is the whole audience. This is almost
+  certainly the right answer.
+- **Web push.** Reaches people who *aren't* opening the app, which is the only
+  thing the sheet can't do. Needs the entire backend from item 1 — push
+  subscriptions, storage, a server holding VAPID keys — so it is only worth
+  considering as a rider on that work, never on its own.
+- **Email.** Needs a sender (a mail API, or a scheduled job) *and* a list of
+  addresses, which is the first personal data this app would ever store —
+  against the local-only design it has kept from the start, and the "Local &
+  private — no accounts, no servers, no tracking" line in the README. (The
+  welcome screen makes no such claim; it says only what Zen is for.) For an
+  audience of two, a text message costs nothing and breaks no promises.
+
+**Worth deciding first:** whether the audience is really "users" or "family I
+can text." Two people don't need infrastructure. The in-app sheet is worth
+building anyway, because it scales to strangers without asking anyone for an
+address — but the push and email paths shouldn't be started until someone who
+can't be texted is actually using this.
+
+---
+
+## 8. A gong that keeps ringing through the session
+
+> The bell should sound during a session, not only at the end — through both
+> the countdown and the stopwatch.
+
+**Status:** not started. Most of the hard part is already solved.
+
+**What happens today:** `chime()` rings the bell exactly once, from
+`finishTimer(true)` — so only a countdown that runs to zero ever makes a
+sound. The stopwatch is silent from beginning to end, because it has no end.
+
+**What's already been solved, and must not be undone:** the bell is an
+`<audio>` element rather than the Web Audio API *specifically* because iOS
+silences Web Audio when the ring/silent switch is on but plays media elements
+through it. And `primeAudio()` plays the bell unmuted for a few milliseconds
+inside the real tap that starts the timer, which is what buys the right to
+play it later without a gesture. That priming already covers repeated plays —
+a gong at minute five is the same kind of unprompted play as the one at the
+end, so no new audio unlocking is needed.
+
+**The real difficulty is time passing while nobody is looking.** `tick()`
+derives elapsed time from the clock rather than by counting intervals, so the
+*display* is always right after a phone sleeps. Firing a sound is different:
+a throttled or suspended tab won't run its interval on time, so an interval
+gong can be late or missed entirely with the screen off. The wake lock helps
+while the timer view is open, but it isn't a guarantee. And `resumeTimer()`
+restores a session that was running when the app closed — so interval gongs
+need to know which ones already went by, or reopening the app after ten
+minutes fires a burst of missed ones at once.
+
+**Worth deciding first:**
+
+- **The interval.** Fixed at five minutes, or chosen per session? A fixed
+  default is one less control on a screen that has stayed calm by having few.
+- **Where it applies.** Countdown, stopwatch, or both. The stopwatch is where
+  it earns the most — an open-ended session with no marks in it is exactly
+  where you lose track.
+- **The shape.** Many traditions ring three at the start, one at each
+  interval, three at the end. Worth knowing whether the goal is timekeeping or
+  ceremony, because they want different things.
+- **A way to turn it off**, which means the first sound setting this app has
+  ever had. Note that `CLAUDE.md` lists a `zen-sound` key under Storage keys,
+  but nothing in `index.html` reads or writes it — the key doesn't exist. That
+  doc line needs correcting whether or not this gets built.
+
+---
+
 ## Parking lot
 
 Smaller things mentioned in passing, not yet thought through:
