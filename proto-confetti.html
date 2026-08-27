@@ -1,0 +1,2363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Zen — Meditation Tracker</title>
+<meta name="theme-color" content="#0e1113" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="icon-192.png" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Zen" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0e1113;
+    --surface: #15191c;
+    --surface-2: #1b2024;
+    --line: rgba(255, 255, 255, 0.06);
+    --text: #e8e4dc;
+    --text-dim: #8a877f;
+    --text-faint: #55534d;
+    --accent: #a3b18a;
+    --accent-soft: rgba(163, 177, 138, 0.14);
+    --accent-glow: rgba(163, 177, 138, 0.35);
+    /* Rating palette: separated enough to read at dot size — green, amber,
+       terracotta — while staying muted against the dark page. */
+    --r-good: #9ec27b;
+    --r-okay: #e0b544;
+    --r-rough: #d1675a;
+    --radius: 20px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    background: var(--bg);
+    background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(163, 177, 138, 0.07), transparent);
+    color: var(--text);
+    font-family: "Inter", system-ui, sans-serif;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: calc(24px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+  }
+
+  .app {
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  /* ---------- header ---------- */
+  header { text-align: center; }
+
+  .breath {
+    width: 10px;
+    height: 10px;
+    margin: 0 auto 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: breathe 6s ease-in-out infinite;
+  }
+
+  @keyframes breathe {
+    0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0 var(--accent-glow); opacity: 0.7; }
+    50%      { transform: scale(1.35); box-shadow: 0 0 24px 8px var(--accent-glow); opacity: 1; }
+  }
+
+  .greeting {
+    display: block;
+    margin: 0 auto;
+    padding: 2px 6px;
+    background: none;
+    border: none;
+    color: var(--text);
+    max-width: 100%;
+    font-family: "Cormorant Garamond", Georgia, serif;
+    /* Scales down on narrow screens so a long name still fits on one line. */
+    font-size: clamp(23px, 7.4vw, 34px);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    line-height: 1.15;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .greeting:hover { opacity: 0.75; }
+
+  .tagline {
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 300;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  /* ---------- stats ---------- */
+  /* ---------- stats ----------
+     No cards. A rounded surface in this app means "you can press this", and
+     three facts wearing the same shape as the buttons made the page read as
+     five things to press. The numbers now sit straight on the page, divided
+     by the same hairline the calendar uses for its week column. */
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 2px 4px;
+    background: none;
+    border: none;
+    text-align: center;
+  }
+  .stat + .stat { border-left: 1px solid var(--line); }
+
+  /* The weekly-goal figure is still tappable to edit the goal. Without a card
+     to give that away, the pencil beside the label is the only affordance —
+     so it sits inline with the words rather than off in a corner. */
+  .stat-btn {
+    font-family: inherit;
+    color: var(--text);
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .stat-btn:hover { opacity: 0.78; }
+
+  /* Meeting the goal used to light up a tile border. With no border, the
+     number itself glows and its label turns sage. */
+  .stat-btn.met b { text-shadow: 0 0 18px rgba(163, 177, 138, 0.45); }
+  .stat-btn.met > span { color: var(--accent); }
+
+  .week-pencil {
+    flex: none;
+    color: var(--text-faint);
+    transition: color 0.2s;
+  }
+  .stat-btn:hover .week-pencil { color: var(--text-dim); }
+
+  .stat b {
+    display: block;
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 30px;
+    font-weight: 500;
+    /* Fixed height and line-height so the smaller "/5" glyphs can't stretch
+       this row — every tile's number occupies the same box and the labels
+       line up across all three. */
+    line-height: 33px;
+    height: 33px;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* "3/5" — the goal reads smaller and dimmer than the count. */
+  .stat b i,
+  .stat b em {
+    font-style: normal;
+    font-size: 19px;
+    margin-left: 1px;
+  }
+  .stat b i { color: var(--text-faint); }
+  .stat b em { color: var(--text-dim); }
+
+  /* Direct child only — the count inside <b> is a span too. */
+  .stat > span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  /* ---------- actions ----------
+     Both live at the foot of the page, under the calendar they act on: you
+     look at the month, then decide to meditate or to record one you've done. */
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .act {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 15px 8px;
+    border-radius: var(--radius);
+    border: 1px solid transparent;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.15s;
+  }
+  .act:active { transform: scale(0.985); }
+  .act svg { flex: none; }
+
+  /* Both outlined, neither filled. A filled button next to an outlined one
+     ranked them, and these are two ways of doing the same thing rather than a
+     main action and a lesser one. Transparent also lets the page's own wash
+     show through, which a filled panel was covering up. */
+  .begin,
+  .log-btn {
+    background: transparent;
+    border-color: rgba(163, 177, 138, 0.28);
+    color: var(--accent);
+  }
+  .begin:hover,
+  .log-btn:hover {
+    background: var(--accent-soft);
+    border-color: rgba(163, 177, 138, 0.45);
+  }
+
+  /* ---------- timer / stopwatch picker ---------- */
+  .mode-label {
+    margin: -6px 0 9px;
+    text-align: center;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+  .mode-label + .lens { margin-bottom: 18px; }
+
+  .lens { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+  .stopwatch {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    width: 100%;
+    padding: 15px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, background 0.2s, transform 0.15s;
+  }
+  .stopwatch:hover { color: var(--text); border-color: rgba(255, 255, 255, 0.16); }
+  .stopwatch:active { transform: scale(0.98); }
+
+  .len {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 14px 6px 11px;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s, background 0.2s, transform 0.15s;
+  }
+  .len b {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 26px;
+    font-weight: 500;
+    line-height: 1;
+    color: var(--accent);
+  }
+  .len:hover { color: var(--text); border-color: rgba(255, 255, 255, 0.16); }
+  .len:active { transform: scale(0.96); }
+
+  /* ---------- running timer ---------- */
+  .timer-view {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 46px;
+    padding: 40px 24px calc(40px + env(safe-area-inset-bottom));
+    background: var(--bg);
+    background-image: radial-gradient(ellipse 70% 45% at 50% 40%, rgba(163, 177, 138, 0.1), transparent);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s;
+  }
+  .timer-view.open { opacity: 1; pointer-events: auto; }
+
+  .timer-stage {
+    position: relative;
+    width: 240px;
+    height: 240px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ring { position: absolute; inset: 0; transform: rotate(-90deg); }
+  .ring-bg, .ring-fg { fill: none; stroke-width: 2; }
+  .ring-bg { stroke: rgba(255, 255, 255, 0.07); }
+  .ring-fg {
+    stroke: var(--accent);
+    stroke-linecap: round;
+    stroke-dasharray: 691.15;
+    stroke-dashoffset: 691.15;
+    opacity: 0.75;
+    transition: stroke-dashoffset 0.3s linear;
+  }
+  .ring-fg.hidden { display: none; }
+
+  .timer-orb {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 45%, rgba(163, 177, 138, 0.2), rgba(163, 177, 138, 0.03) 70%);
+    animation: breathe 6s ease-in-out infinite;
+  }
+
+  .timer-readout {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .timer-time {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 52px;
+    font-weight: 500;
+    line-height: 1;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .timer-mode {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .timer-end {
+    padding: 13px 34px;
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .timer-end:hover { color: var(--text); border-color: rgba(255, 255, 255, 0.2); }
+
+  /* ---------- calendar ---------- */
+  .calendar {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px 18px 22px;
+  }
+
+  .cal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+
+  .cal-title {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  .cal-title em {
+    font-style: italic;
+    color: var(--text-dim);
+    margin-left: 6px;
+  }
+
+  .nav-btn {
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+  }
+
+  .nav-btn:hover {
+    color: var(--text);
+    border-color: rgba(255, 255, 255, 0.18);
+    background: var(--surface-2);
+  }
+
+  /* Seven days, then a narrow column tallying that week — every row of a
+     month grid is already a week, so the history has somewhere to live. */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr) 42px;
+    gap: 6px 4px;
+  }
+
+  .wk {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 6px;
+    border-left: 1px solid var(--line);
+    font-size: 10.5px;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+  }
+  /* The goal reads lighter than the count, so the number still leads. */
+  .wk i { font-style: normal; opacity: 0.5; }
+  .wk.met { color: var(--accent); }
+
+  .wk-head { margin-left: 6px; }
+
+  .dow {
+    text-align: center;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    color: var(--text-faint);
+    padding-bottom: 8px;
+  }
+
+  .day {
+    position: relative;
+    aspect-ratio: 1;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    /* Dim by default so today can be the bright one — see .day.today. */
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, transform 0.15s;
+  }
+
+  .day:hover { background: var(--surface-2); }
+  .day:active { transform: scale(0.9); }
+
+  .day.blank { cursor: default; }
+  .day.blank:hover { background: transparent; }
+
+  .day.future {
+    color: var(--text-faint);
+    cursor: default;
+  }
+  .day.future:hover { background: transparent; }
+  .day.future:active { transform: none; }
+
+  /* Today wins on lightness, not hue. It used to be sage against bone, which
+     are near-identical in brightness and differ only in colour — the weakest
+     signal at this size, the first to fail in sunlight, and invisible to
+     anyone slightly colour-blind. Today is now the brightest thing in the
+     grid and every other day steps back, which survives all three. */
+  .day.today {
+    color: #fff;
+    font-weight: 600;
+  }
+
+  /* Every logged day is the same quiet ring; the rating is a small coloured
+     dot inside it, so the calendar stays calm at a glance. */
+  .day.done {
+    font-weight: 500;
+    box-shadow: inset 0 0 0 1.5px rgba(232, 228, 220, 0.22);
+  }
+  .day.done:hover { background: rgba(232, 228, 220, 0.07); }
+
+  .dots {
+    position: absolute;
+    left: 50%;
+    bottom: 4.5px;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 2px;
+  }
+
+  .sdot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    /* Unrated: an outline, the same thing an unrated day has always said. */
+    box-shadow: inset 0 0 0 1.3px rgba(232, 228, 220, 0.5);
+  }
+  .dots:has(.sdot + .sdot) .sdot { width: 5px; height: 5px; }
+  .sdot.r-good  { background: var(--r-good);  box-shadow: none; }
+  .sdot.r-okay  { background: var(--r-okay);  box-shadow: none; }
+  .sdot.r-rough { background: var(--r-rough); box-shadow: none; }
+
+  /* More than three: a leading tick says the row is truncated. */
+  .dots.many::before {
+    content: "";
+    align-self: center;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: rgba(232, 228, 220, 0.35);
+    margin-right: 1px;
+  }
+
+  .day.pop { animation: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+  @keyframes pop {
+    0%   { transform: scale(0.7); }
+    60%  { transform: scale(1.12); }
+    100% { transform: scale(1); }
+  }
+
+  /* ---------- rating sheet ---------- */
+  /* A ring with the rating dot inside, echoing the calendar exactly. */
+  .dot-sw {
+    position: relative;
+    display: block;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1.5px rgba(232, 228, 220, 0.22);
+  }
+  .dot-sw::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  /* Same wash as the calendar circles, so legend and days always agree. */
+  .sw-good  { color: var(--r-good); }
+  .sw-okay  { color: var(--r-okay); }
+  .sw-rough { color: var(--r-rough); }
+
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(4, 6, 7, 0.55);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+    z-index: 10;
+  }
+  .backdrop.open { opacity: 1; pointer-events: auto; }
+
+  .sheet {
+    position: fixed;
+    left: 50%;
+    bottom: 0;
+    transform: translate(-50%, 105%);
+    width: 100%;
+    max-width: 420px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-bottom: none;
+    border-radius: 24px 24px 0 0;
+    padding: 22px 20px calc(18px + env(safe-area-inset-bottom));
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0.35, 1);
+    z-index: 11;
+    touch-action: pan-y;
+  }
+  .sheet.open { transform: translate(-50%, 0); }
+  /* While a finger is on it, follow the drag exactly — no easing. */
+  .sheet.dragging { transition: none; }
+
+  .sheet-handle {
+    width: 36px;
+    height: 4px;
+    margin: -8px auto 14px;
+    border-radius: 2px;
+    background: rgba(232, 228, 220, 0.18);
+  }
+
+  .sheet-date {
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .sheet-title {
+    text-align: center;
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 24px;
+    font-weight: 500;
+    margin: 4px 0 18px;
+  }
+
+  .opts { display: flex; gap: 10px; }
+
+  .opt {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 16px 8px 13px;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s, background 0.2s, transform 0.15s;
+  }
+  .opt:hover { color: var(--text); border-color: rgba(255, 255, 255, 0.16); }
+  .opt:active { transform: scale(0.96); }
+  .opt.selected {
+    border-color: rgba(163, 177, 138, 0.6);
+    color: var(--text);
+    background: rgba(163, 177, 138, 0.07);
+  }
+
+  .sheet-remove {
+    display: block;
+    width: 100%;
+    margin-top: 12px;
+    padding: 10px;
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .sheet-remove:hover { color: #c99a8f; }
+
+
+
+  /* ---------- the day's sessions ---------- */
+  .slist { display: flex; flex-direction: column; gap: 7px; margin: -4px 0 12px; }
+  .slist:empty { display: none; }
+
+  .srow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px 13px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .srow:hover { border-color: rgba(255, 255, 255, 0.16); background: var(--surface-2); }
+  .srow.editing { border-color: rgba(163, 177, 138, 0.5); background: rgba(163, 177, 138, 0.06); }
+
+  .srow .when { min-width: 56px; text-align: left; color: var(--text-faint); font-size: 11px; }
+  .srow .what { color: var(--text-dim); }
+  /* LABELS are lower case for speech ("meditated, not great"); on screen the
+     row should read as a label. */
+  .srow .what::first-letter { text-transform: uppercase; }
+  /* Not .len — that belongs to the timer's length chips, and the styles collide. */
+  .srow .mins {
+    margin-left: auto;
+    color: var(--text-dim);
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .add-session {
+    width: 100%;
+    margin-bottom: 14px;
+    padding: 10px;
+    background: none;
+    border: 1px dashed rgba(232, 228, 220, 0.16);
+    border-radius: 12px;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 11.5px;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .add-session:hover { color: var(--text); border-color: rgba(232, 228, 220, 0.3); }
+
+    /* ---------- session length ---------- */
+  .dur-label {
+    margin: -10px 0 9px;
+    text-align: center;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .dur-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 7px;
+    margin-bottom: 20px;
+  }
+
+  .dur {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 8px 14px;
+    color: var(--text-faint);
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s, background 0.2s, transform 0.15s;
+  }
+  .dur:hover { color: var(--text-dim); border-color: rgba(255, 255, 255, 0.14); }
+  .dur:active { transform: scale(0.94); }
+  .dur.selected {
+    border-color: rgba(163, 177, 138, 0.55);
+    background: rgba(163, 177, 138, 0.1);
+    color: var(--accent);
+  }
+
+  .dur-plus { min-width: 42px; font-size: 15px; line-height: 1; }
+
+  .dur-input {
+    width: 82px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 8px 10px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12px; /* matches the chips */
+    letter-spacing: 0.03em;
+    text-align: center;
+    outline: none;
+    -moz-appearance: textfield;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+  }
+  .dur-input::placeholder {
+    color: var(--text-faint);
+    font-style: italic;
+  }
+  /* iOS zooms the page when a focused field is under 16px, so grow it for
+     the moment it's being typed into — at rest it sits level with the chips. */
+  .dur-input:focus {
+    border-color: rgba(163, 177, 138, 0.5);
+    font-size: 16px;
+  }
+  .dur-input.selected {
+    border-color: rgba(163, 177, 138, 0.55);
+    background: rgba(163, 177, 138, 0.1);
+    color: var(--accent);
+  }
+  .dur-input::-webkit-outer-spin-button,
+  .dur-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  /* ---------- goal sheet ---------- */
+  .stepper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    margin: 6px 0 4px;
+  }
+
+  .step-btn {
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, background 0.2s, transform 0.15s;
+  }
+  .step-btn:hover { color: var(--text); border-color: rgba(255, 255, 255, 0.18); }
+  .step-btn:active { transform: scale(0.92); }
+
+  .goal-num {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 46px;
+    font-weight: 500;
+    color: var(--accent);
+    min-width: 52px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .goal-done {
+    display: block;
+    width: 100%;
+    margin-top: 16px;
+    padding: 13px;
+    background: var(--accent-soft);
+    border: none;
+    border-radius: 14px;
+    color: var(--accent);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .goal-done:hover { background: rgba(163, 177, 138, 0.22); }
+
+  /* ---------- onboarding ----------
+     A full screen rather than a sheet: first run is the one moment there is
+     nothing behind to look at, and a sheet over an empty calendar reads as an
+     interruption rather than a welcome.
+
+     It asks only what the app cannot work out for itself — a name and a goal.
+     How to log a session is not explained here; the calendar shows that in
+     place, on the day it is needed. See .coach below. */
+  .onboard {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: none;
+    flex-direction: column;
+    background: var(--bg);
+    background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(163, 177, 138, 0.09), transparent);
+    padding: calc(28px + env(safe-area-inset-top)) 22px calc(20px + env(safe-area-inset-bottom));
+  }
+  .onboard.open { display: flex; }
+
+  .ob-bar {
+    display: flex;
+    justify-content: center;
+    gap: 7px;
+  }
+
+  .ob-pip {
+    width: 5px;
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(232, 228, 220, 0.16);
+    transition: background 0.35s, width 0.35s;
+  }
+  .ob-pip.on { width: 16px; background: var(--accent); }
+
+  .ob-stage {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  .ostep { display: none; width: 100%; text-align: center; }
+  .ostep.on {
+    display: block;
+    animation: obIn 0.45s cubic-bezier(0.32, 0.72, 0.35, 1);
+  }
+
+  @keyframes obIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .ob-kicker {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .ob-title {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 30px;
+    font-weight: 500;
+    line-height: 1.2;
+    margin: 6px 0 16px;
+  }
+
+  .ob-lede {
+    color: var(--text-dim);
+    font-size: 13.5px;
+    line-height: 1.65;
+  }
+
+  /* The unit the stepper counts. The goal screen asks its question in words
+     and answers it with a number, so the number has to say what it is. */
+  .goal-unit {
+    margin-top: 10px;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .ob-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  .ob-back {
+    flex: none;
+    padding: 13px 14px;
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .ob-back:hover { color: var(--text-dim); }
+  .ob-back[hidden] { display: none; }
+
+  .ob-next { flex: 1; margin-top: 0; }
+
+  .ob-skip {
+    width: 100%;
+    max-width: 400px;
+    margin: 2px auto 0;
+  }
+  .ob-skip[hidden] { display: none; }
+
+  /* ---------- first-log coach ----------
+     Onboarding never says how to log a session, so the calendar says it once,
+     on an empty log, and stops the moment there is anything to show. No stored
+     flag: "nothing logged yet" is the condition, and it is already in the data. */
+  .coach {
+    margin: 14px 0 0;
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--text-faint);
+    animation: coachIn 0.6s ease both;
+  }
+  .coach[hidden] { display: none; }
+
+  @keyframes coachIn { from { opacity: 0; } to { opacity: 1; } }
+
+  /* A ring that breathes out of today, drawn behind the number rather than on
+     the .day itself, so it never fights the ring a logged day wears. */
+  .day.today.hint::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    animation: hintPulse 2.6s ease-in-out infinite;
+  }
+
+  @keyframes hintPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(163, 177, 138, 0.30); }
+    50%      { box-shadow: 0 0 0 7px rgba(163, 177, 138, 0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .day.today.hint::before { animation: none; box-shadow: 0 0 0 3px rgba(163, 177, 138, 0.22); }
+    .ostep.on, .coach { animation: none; }
+  }
+
+  /* ---------- goal celebration ---------- */
+  .confetti {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    pointer-events: none;
+  }
+  .confetti[hidden] { display: none; }
+
+  /* Sits over the calendar, not the stats — the point is to watch the week
+     tally flip to met while this is on screen. */
+  .hooray {
+    position: fixed;
+    left: 50%;
+    top: 40%;
+    z-index: 41;
+    transform: translate(-50%, -50%);
+    width: calc(100% - 44px);
+    max-width: 340px;
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+  }
+  .hooray[hidden] { display: none; }
+  .hooray.show { animation: hoorayIn 3.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+  @keyframes hoorayIn {
+    0%   { opacity: 0; transform: translate(-50%, calc(-50% + 14px)) scale(0.94); }
+    12%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    82%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, calc(-50% - 10px)) scale(1); }
+  }
+
+  .hooray h2 {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 38px;
+    font-weight: 500;
+    line-height: 1.08;
+    text-shadow: 0 0 34px rgba(14, 17, 19, 0.95), 0 0 12px rgba(14, 17, 19, 1);
+  }
+  .hooray h2 em { font-style: italic; color: var(--accent); }
+  .hooray p {
+    margin-top: 10px;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    color: var(--text-dim);
+    text-shadow: 0 0 22px rgba(14, 17, 19, 0.95), 0 0 10px rgba(14, 17, 19, 1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hooray.show { animation-duration: 3.4s; }
+  }
+
+  /* ---------- name sheet ---------- */
+  .name-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 16px; /* 16px keeps iOS from zooming on focus */
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .name-input::placeholder { color: var(--text-faint); }
+  .name-input:focus { border-color: rgba(163, 177, 138, 0.5); }
+
+  /* The rating legend that used to sit here is gone. The three buttons in the
+     log sheet are the legend — same dot, same colour, same word — so the
+     footer was repeating itself to anyone who had ever opened a day, and it
+     cost a whole row on a page that needed one back. */
+
+  @media (max-width: 380px) {
+    .stat b { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div class="breath" aria-hidden="true"></div>
+      <button class="greeting" id="greeting" aria-haspopup="dialog">Zen</button>
+      <p class="tagline">One breath at a time</p>
+    </header>
+
+    <section class="stats" aria-label="Statistics">
+      <button class="stat stat-btn" id="week-card" aria-haspopup="dialog">
+        <b><span id="week-count">0</span><i>/</i><em id="week-goal">5</em></b>
+        <span><span id="week-label">This week</span><svg class="week-pencil" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
+      </button>
+      <div class="stat"><b id="stat-month">0</b><span>This month</span></div>
+      <div class="stat"><b id="stat-good">0</b><span>Good sessions</span></div>
+    </section>
+
+    <section class="calendar" aria-label="Calendar">
+      <div class="cal-head">
+        <button class="nav-btn" id="prev" aria-label="Previous month">&#8249;</button>
+        <div class="cal-title" id="cal-title"></div>
+        <button class="nav-btn" id="next" aria-label="Next month">&#8250;</button>
+      </div>
+      <div class="grid" id="grid"></div>
+      <p class="coach" id="coach" hidden>Tap today to log your first session.</p>
+    </section>
+
+    <section class="actions" aria-label="Actions">
+      <button class="act begin" id="begin-btn">
+        <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        Begin session
+      </button>
+      <button class="act log-btn" id="log-btn" aria-haspopup="dialog">
+        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        Log a session
+      </button>
+    </section>
+  </main>
+
+  <canvas class="confetti" id="confetti" hidden aria-hidden="true"></canvas>
+  <div class="hooray" id="hooray" hidden role="status">
+    <h2>Congrats!<br /><em>You met your weekly goal</em></h2>
+    <p id="hooray-sub">Five days this week</p>
+  </div>
+
+  <div class="backdrop" id="backdrop"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <p class="sheet-date" id="sheet-date"></p>
+    <h2 class="sheet-title" id="sheet-title">How was your session today?</h2>
+    <div class="slist" id="slist"></div>
+    <button class="add-session" id="add-session">+ Add another session</button>
+    <p class="dur-label" id="dur-label">How long?</p>
+    <div class="dur-row" id="dur-row"></div>
+    <div class="opts" id="opts">
+      <button class="opt" data-rating="good"><i class="dot-sw sw-good"></i>Good</button>
+      <button class="opt" data-rating="okay"><i class="dot-sw sw-okay"></i>Okay</button>
+      <button class="opt" data-rating="rough"><i class="dot-sw sw-rough"></i>Not great</button>
+    </div>
+    <button class="goal-done" id="sheet-save">Save</button>
+    <button class="sheet-remove" id="sheet-remove">Remove this day</button>
+  </div>
+
+  <div class="sheet" id="goal-sheet" role="dialog" aria-modal="true" aria-labelledby="goal-title">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <p class="sheet-date">Weekly goal</p>
+    <h2 class="sheet-title" id="goal-title">Sessions per week</h2>
+    <div class="stepper">
+      <button class="step-btn" id="goal-minus" aria-label="Decrease goal">&minus;</button>
+      <span class="goal-num" id="goal-num">5</span>
+      <button class="step-btn" id="goal-plus" aria-label="Increase goal">+</button>
+    </div>
+    <button class="goal-done" id="goal-done">Done</button>
+  </div>
+
+  <div class="sheet" id="timer-sheet" role="dialog" aria-modal="true" aria-labelledby="timer-title">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <h2 class="sheet-title" id="timer-title">Begin a session</h2>
+    <p class="mode-label">Timer &mdash; count down</p>
+    <div class="lens">
+      <button class="len" data-min="5"><b>5</b>min</button>
+      <button class="len" data-min="10"><b>10</b>min</button>
+      <button class="len" data-min="15"><b>15</b>min</button>
+      <button class="len" data-min="20"><b>20</b>min</button>
+      <button class="len" data-min="30"><b>30</b>min</button>
+      <button class="len" data-min="45"><b>45</b>min</button>
+    </div>
+    <p class="mode-label">Stopwatch &mdash; count up</p>
+    <button class="stopwatch" id="stopwatch-btn">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 1h6"/></svg>
+      Practice for as long as you like
+    </button>
+  </div>
+
+  <!-- A media element, not the Web Audio API: iOS silences Web Audio when the
+       ring/silent switch is on, but plays media elements through it. -->
+  <audio id="bell" src="bell.wav" preload="auto" playsinline></audio>
+
+  <div class="timer-view" id="timer-view" role="dialog" aria-modal="true" aria-label="Meditation timer">
+    <div class="timer-stage">
+      <svg class="ring" viewBox="0 0 240 240" aria-hidden="true">
+        <circle class="ring-bg" cx="120" cy="120" r="110" />
+        <circle class="ring-fg" id="ring-fg" cx="120" cy="120" r="110" />
+      </svg>
+      <div class="timer-orb" aria-hidden="true"></div>
+      <div class="timer-readout">
+        <span class="timer-time" id="timer-time">0:00</span>
+        <span class="timer-mode" id="timer-mode"></span>
+      </div>
+    </div>
+    <button class="timer-end" id="timer-end">End session</button>
+  </div>
+
+  <div class="sheet" id="name-sheet" role="dialog" aria-modal="true" aria-labelledby="name-title">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <p class="sheet-date">Your name</p>
+    <h2 class="sheet-title" id="name-title">What should we call you?</h2>
+    <input class="name-input" id="name-input" type="text" maxlength="24"
+           placeholder="Your name" autocomplete="given-name" enterkeyhint="done" />
+    <button class="goal-done" id="name-save">Save</button>
+  </div>
+
+  <div class="onboard" id="onboard" role="dialog" aria-modal="true" aria-label="Welcome to Zen">
+    <div class="ob-bar" id="ob-bar" aria-hidden="true"></div>
+
+    <div class="ob-stage">
+      <section class="ostep" aria-label="Welcome">
+        <div class="breath" aria-hidden="true"></div>
+        <h1 class="ob-title">Welcome to Zen</h1>
+        <p class="ob-lede">
+          A habit tracker for your meditation practice.
+          Set a goal, log each session, and let the weeks
+          add up, one breath at a time.
+        </p>
+      </section>
+
+      <section class="ostep" aria-label="Your name">
+        <p class="ob-kicker">Hello</p>
+        <h2 class="ob-title">What should we call you?</h2>
+        <input class="name-input" id="ob-name" type="text" maxlength="24"
+               placeholder="Your name" autocomplete="given-name"
+               autocapitalize="words" enterkeyhint="next" />
+      </section>
+
+      <section class="ostep" aria-label="Weekly goal">
+        <p class="ob-kicker">Weekly goal</p>
+        <h2 class="ob-title">How often do you want to practice?</h2>
+        <div class="stepper">
+          <button class="step-btn" id="ob-minus" aria-label="Decrease goal">&minus;</button>
+          <span class="goal-num" id="ob-goal">5</span>
+          <button class="step-btn" id="ob-plus" aria-label="Increase goal">+</button>
+        </div>
+        <p class="goal-unit">Days a week</p>
+      </section>
+    </div>
+
+    <div class="ob-actions">
+      <button class="ob-back" id="ob-back" hidden>Back</button>
+      <button class="goal-done ob-next" id="ob-next">Continue</button>
+    </div>
+    <button class="sheet-remove ob-skip" id="ob-skip">Skip</button>
+  </div>
+
+<script>
+(() => {
+  const STORAGE_KEY = "zen-meditation-log";
+  const LEGACY_KEY = "zen-meditation-days";
+  const GOAL_KEY = "zen-weekly-goal";
+  const GOALS_KEY = "zen-goal-history";
+  const NAME_KEY = "zen-name";
+  const ONBOARD_KEY = "zen-onboarded";
+  const TIMER_KEY = "zen-timer";
+  const MONTHS = ["January","February","March","April","May","June",
+                  "July","August","September","October","November","December"];
+  const DOWS = ["S","M","T","W","T","F","S"];
+  const LABELS = { good: "good", okay: "okay", rough: "not great" };
+
+  const grid = document.getElementById("grid");
+  const coach = document.getElementById("coach");
+  const title = document.getElementById("cal-title");
+
+  // log maps ISO date -> rating: "good" | "okay" | "rough"
+  let log = load();
+  let goal = loadGoal();
+  let goals = loadGoals();
+  let name = localStorage.getItem(NAME_KEY) || "";
+  let view = new Date();
+  view.setDate(1);
+  let sheetKey = null;   // date currently open in the rating sheet
+  let selMinutes = null; // length chosen in the sheet, null = not recorded
+  let selRating = null;  // rating chosen in the sheet, null = none
+  let editIndex = null;  // null = the day's list, -1 = new, 0.. = that session
+  let pendingAt = null;  // when a timed session began, so it logs its start time
+  let durExpanded = false; // "More" tapped: show the full set of lengths
+  let justRated = null;  // date to pop-animate on next render
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        // Three shapes have existed: v2 a bare rating string, v3 a single
+        // { rating, minutes }, v4 a day holding a list of sessions. Anything
+        // older becomes that day's first and only session.
+        const parsed = JSON.parse(raw) || {};
+        let changed = false;
+        for (const k in parsed) {
+          const v = parsed[k];
+          if (typeof v === "string") {
+            parsed[k] = { sessions: [{ rating: v }] };
+            changed = true;
+          } else if (v && !Array.isArray(v.sessions)) {
+            const s = {};
+            if (v.rating) s.rating = v.rating;
+            if (v.minutes) s.minutes = v.minutes;
+            parsed[k] = { sessions: [s] };
+            changed = true;
+          }
+        }
+        if (changed) localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        return parsed;
+      }
+      // Migrate v1 data: unrated marked days become "okay".
+      const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY));
+      if (Array.isArray(legacy) && legacy.length) {
+        const migrated = {};
+        for (const d of legacy) migrated[d] = { sessions: [{ rating: "okay" }] };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+        return migrated;
+      }
+    } catch {}
+    return {};
+  }
+
+  function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(log));
+  }
+
+  /* ---------- days and sessions ----------
+     A day holds a list of sessions. The weekly goal counts days, not
+     sessions — two sessions on Monday shouldn't buy Tuesday off — so
+     everything that feeds the goal goes through sessionsOn().length > 0,
+     and switching the goal to sessions later means counting them instead. */
+  function sessionsOn(k) {
+    const day = log[k];
+    return (day && Array.isArray(day.sessions)) ? day.sessions : [];
+  }
+
+  function setSessions(k, list) {
+    if (list.length) log[k] = { sessions: list };
+    else delete log[k];
+  }
+
+  // Sessions are kept in the order they happened, so a day reads top to bottom.
+  function sortSessions(list) {
+    return list.slice().sort((a, b) => (a.at || "") < (b.at || "") ? -1 : 1);
+  }
+
+  function clockOf(session) {
+    if (!session.at) return "";
+    const d = new Date(session.at);
+    if (isNaN(d)) return "";
+    let h = d.getHours();
+    const suffix = h < 12 ? "am" : "pm";
+    h = h % 12 || 12;
+    return `${h}:${String(d.getMinutes()).padStart(2, "0")} ${suffix}`;
+  }
+
+  function key(y, m, d) {
+    return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  }
+
+  function todayKey() {
+    const t = new Date();
+    return key(t.getFullYear(), t.getMonth(), t.getDate());
+  }
+
+  function loadGoal() {
+    const g = parseInt(localStorage.getItem(GOAL_KEY), 10);
+    return g >= 1 && g <= 7 ? g : 5;
+  }
+
+  function isoDay(d) {
+    return key(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+
+  function weekStartOf(d) {
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay());
+  }
+
+  /* ---------- goal history ----------
+     A week should be judged by the goal that was set at the time, not by
+     whatever it happens to be today. Each change is recorded against the week
+     it took effect, and a week uses the most recent change on or before it. */
+  function loadGoals() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(GOALS_KEY));
+      if (Array.isArray(raw)) {
+        const clean = raw
+          .filter((e) => e && typeof e.start === "string" && e.goal >= 1 && e.goal <= 7)
+          .sort((a, b) => (a.start < b.start ? -1 : 1));
+        if (clean.length) return clean;
+      }
+    } catch {}
+    // Nothing recorded yet: today's goal is all we know. Weeks before it fall
+    // back to the same number, since earlier goals were never kept.
+    const seeded = [{ start: isoDay(weekStartOf(new Date())), goal }];
+    localStorage.setItem(GOALS_KEY, JSON.stringify(seeded));
+    return seeded;
+  }
+
+  function goalForWeek(start) {
+    const iso = isoDay(start);
+    let g = goals[0].goal;
+    for (const e of goals) {
+      if (e.start > iso) break;
+      g = e.goal;
+    }
+    return g;
+  }
+
+  function recordGoal(g) {
+    const iso = isoDay(weekStartOf(new Date()));
+    const last = goals[goals.length - 1];
+    // Changing the goal twice in one week is one decision, not two.
+    if (last && last.start === iso) last.goal = g;
+    else goals.push({ start: iso, goal: g });
+    localStorage.setItem(GOALS_KEY, JSON.stringify(goals));
+  }
+
+  function saveGoal() {
+    localStorage.setItem(GOAL_KEY, String(goal));
+  }
+
+  // One dot per session, to three; beyond that the count matters more than
+  // the shades, and four dots under a date is a smudge.
+  function sessionDots(sessions) {
+    const wrap = document.createElement("span");
+    wrap.className = "dots";
+    for (const s of sessions.slice(0, 3)) {
+      const dot = document.createElement("i");
+      dot.className = "sdot" + (s.rating ? " r-" + s.rating : "");
+      wrap.appendChild(dot);
+    }
+    if (sessions.length > 3) wrap.classList.add("many");
+    return wrap;
+  }
+
+  function describeDay(sessions) {
+    if (!sessions.length) return "not marked";
+    const parts = sessions.map((s) => {
+      const bits = [s.rating ? LABELS[s.rating] : "no rating"];
+      if (s.minutes) bits.push(`${s.minutes} minutes`);
+      if (clockOf(s)) bits.unshift(clockOf(s));
+      return bits.join(", ");
+    });
+    return `${sessions.length} session${sessions.length > 1 ? "s" : ""} — ${parts.join("; ")}`;
+  }
+
+  // Sessions in the current week (Sunday–Saturday, matching the calendar).
+  function weekCount() {
+    const t = new Date();
+    const start = new Date(t.getFullYear(), t.getMonth(), t.getDate() - t.getDay());
+    let n = 0;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      if (sessionsOn(key(d.getFullYear(), d.getMonth(), d.getDate())).length) n++;
+    }
+    return n;
+  }
+
+  function render() {
+    const y = view.getFullYear(), m = view.getMonth();
+    const now = new Date();
+    const thisMonth = now.getFullYear() === y && now.getMonth() === m;
+
+    title.innerHTML = `${MONTHS[m]} <em>${y}</em>`;
+    grid.innerHTML = "";
+
+    for (const d of DOWS) {
+      const el = document.createElement("div");
+      el.className = "dow";
+      el.textContent = d;
+      grid.appendChild(el);
+    }
+    const wkHead = document.createElement("div");
+    wkHead.className = "dow wk-head";
+    wkHead.textContent = "WK";
+    grid.appendChild(wkHead);
+
+    const firstDow = new Date(y, m, 1).getDay();
+    const total = new Date(y, m + 1, 0).getDate();
+    let cells = 0; // days placed so far, to know when a week row is full
+
+    for (let i = 0; i < firstDow; i++) {
+      const el = document.createElement("div");
+      el.className = "day blank";
+      grid.appendChild(el);
+      cells++;
+    }
+
+    for (let d = 1; d <= total; d++) {
+      const el = document.createElement("button");
+      const k = key(y, m, d);
+      const sessions = sessionsOn(k);
+      const isFuture = new Date(y, m, d) > now;
+      el.className = "day";
+      el.textContent = d;
+      if (k === todayKey()) el.classList.add("today");
+      if (sessions.length) {
+        el.classList.add("done");
+        el.appendChild(sessionDots(sessions));
+      }
+      if (k === justRated) {
+        el.classList.add("pop");
+        el.addEventListener("animationend", () => el.classList.remove("pop"), { once: true });
+      }
+      if (isFuture) {
+        el.classList.add("future");
+        el.disabled = true;
+        el.setAttribute("aria-label", `${MONTHS[m]} ${d} — future`);
+      } else {
+        el.setAttribute("aria-label", `${MONTHS[m]} ${d} — ${describeDay(sessions)}`);
+        el.addEventListener("click", () => openSheet(k, `${MONTHS[m]} ${d}, ${y}`));
+      }
+      grid.appendChild(el);
+      cells++;
+      if (cells % 7 === 0) grid.appendChild(weekCell(y, m, d));
+    }
+    // Pad the last row so its tally lands in the week column, not mid-row.
+    if (cells % 7) {
+      for (let i = cells % 7; i < 7; i++) {
+        const el = document.createElement("div");
+        el.className = "day blank";
+        grid.appendChild(el);
+      }
+      grid.appendChild(weekCell(y, m, total));
+    }
+    justRated = null;
+
+    updateStats(y, m);
+    renderCoach();
+  }
+
+  // Shown only while nothing has ever been logged, and only on the month that
+  // actually contains today — the hint points at a day, so it has to be a day
+  // you can see. Reading the log directly means the hint disappears the instant
+  // a session is saved, and comes back if every session is later removed.
+  function renderCoach() {
+    const today = grid.querySelector(".day.today");
+    const show = Object.keys(log).length === 0 && !!today;
+    coach.hidden = !show;
+    if (today) today.classList.toggle("hint", show);
+  }
+
+  // Sessions logged in the Sunday–Saturday week containing the given day.
+  // Counts the real week, including days that fall in a neighbouring month,
+  // so a row spanning two months still reports the truth.
+  function weekTally(y, m, d) {
+    const day = new Date(y, m, d);
+    const start = new Date(y, m, d - day.getDay());
+    let n = 0;
+    for (let i = 0; i < 7; i++) {
+      const c = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      if (sessionsOn(key(c.getFullYear(), c.getMonth(), c.getDate())).length) n++;
+    }
+    return { n, start };
+  }
+
+  function weekCell(y, m, d) {
+    const el = document.createElement("div");
+    el.className = "wk";
+    const { n, start } = weekTally(y, m, d);
+    // Weeks that haven't begun have nothing to say yet.
+    if (start > new Date()) return el;
+    const g = goalForWeek(start);
+    el.innerHTML = `${n}<i>/${g}</i>`;
+    if (n >= g) el.classList.add("met");
+    el.setAttribute("aria-label",
+      `Week of ${MONTHS[start.getMonth()]} ${start.getDate()}: ${n} of ${g} sessions`);
+    return el;
+  }
+
+  function updateStats(y, m) {
+    const prefix = `${y}-${String(m + 1).padStart(2, "0")}`;
+    let monthCount = 0, goodCount = 0;
+    for (const k in log) {
+      if (!k.startsWith(prefix)) continue;
+      const sessions = sessionsOn(k);
+      if (sessions.length) monthCount++;          // days, matching the goal
+      for (const s of sessions) if (s.rating === "good") goodCount++;
+    }
+    document.getElementById("stat-month").textContent = monthCount;
+    document.getElementById("stat-good").textContent = goodCount;
+
+    // "This week" only means something in the month you're actually in. Look
+    // at another month and the tile answers the question that month can
+    // answer: how many of its weeks hit the goal.
+    const now = new Date();
+    const viewingNow = now.getFullYear() === y && now.getMonth() === m;
+    const count = document.getElementById("week-count");
+    const slash = count.nextElementSibling;
+    const denom = document.getElementById("week-goal");
+    const card = document.getElementById("week-card");
+    let met;
+
+    if (viewingNow) {
+      const wc = weekCount();
+      met = wc >= goal;
+      count.textContent = wc;
+      slash.textContent = "/";
+      denom.textContent = goal;
+      document.getElementById("week-label").textContent = "This week";
+      card.setAttribute("aria-label", `This week: ${wc} of ${goal} sessions. Edit weekly goal.`);
+    } else {
+      const { hit, started } = monthWeeks(y, m);
+      met = started > 0 && hit === started;
+      count.textContent = started ? hit : "—";
+      slash.textContent = started ? "/" : "";
+      denom.textContent = started ? started : "";
+      document.getElementById("week-label").textContent = "Weeks met";
+      card.setAttribute("aria-label",
+        started
+          ? `${MONTHS[m]}: ${hit} of ${started} weeks met the goal. Edit weekly goal.`
+          : `${MONTHS[m]}: no weeks yet. Edit weekly goal.`);
+    }
+    card.classList.toggle("met", met);
+  }
+
+  // How many of a month's weeks hit the goal, out of those that have begun.
+  function monthWeeks(y, m) {
+    const total = new Date(y, m + 1, 0).getDate();
+    const firstDow = new Date(y, m, 1).getDay();
+    const now = new Date();
+    let hit = 0, started = 0;
+    for (let d = 1 - firstDow; d <= total; d += 7) {
+      if (new Date(y, m, d) > now) break;
+      started++;
+      const { n, start } = weekTally(y, m, d);
+      if (n >= goalForWeek(start)) hit++;
+    }
+    return { hit, started };
+  }
+
+  /* ---------- rating sheet ---------- */
+  const sheet = document.getElementById("sheet");
+  const backdrop = document.getElementById("backdrop");
+  const removeBtn = document.getElementById("sheet-remove");
+
+  function openSheet(k, label, presetMinutes) {
+    sheetKey = k;
+    document.getElementById("sheet-date").textContent = label;
+    const sessions = sessionsOn(k);
+    // A day with sessions opens on its list; an empty day, or one arriving
+    // from the timer, opens straight into recording.
+    if (sessions.length && presetMinutes == null) editIndex = null;
+    else editIndex = -1;
+    editSession(editIndex, presetMinutes);
+    backdrop.classList.add("open");
+    sheet.classList.add("open");
+  }
+
+  // editIndex: null shows the day's list, -1 records a new session,
+  // 0.. edits the session at that position.
+  function editSession(index, presetMinutes) {
+    editIndex = index;
+    const sessions = sortSessions(sessionsOn(sheetKey));
+    const editing = index !== null;
+    const current = index >= 0 ? sessions[index] : null;
+
+    selMinutes = presetMinutes != null ? presetMinutes : (current && current.minutes) || null;
+    selRating = (current && current.rating) || null;
+    durExpanded = false;
+    markOptSelection();
+    renderDurs();
+    renderSessions(sessions);
+
+    document.getElementById("sheet-title").textContent = titleFor(sessions, index);
+    document.getElementById("add-session").style.display =
+      !editing && sessions.length ? "block" : "none";
+    for (const id of ["dur-label", "dur-row", "opts", "sheet-save"]) {
+      const el = document.getElementById(id) || document.querySelector("." + id);
+      if (el) el.style.display = editing ? "" : "none";
+    }
+    // null >= 0 is true, so ask explicitly whether a session is being edited.
+    removeBtn.style.display = typeof index === "number" && index >= 0 ? "block" : "none";
+    removeBtn.textContent = "Remove this session";
+  }
+
+  function titleFor(sessions, index) {
+    if (index === null) {
+      return sessions.length === 1 ? "One session today" : `${sessions.length} sessions today`;
+    }
+    if (index >= 0) return "Edit this session";
+    return sessions.length ? "Another session" : "How was your session today?";
+  }
+
+  function renderSessions(sessions) {
+    const list = document.getElementById("slist");
+    list.innerHTML = "";
+    // While recording, the list would compete with the controls below it.
+    if (editIndex !== null) return;
+    sessions.forEach((s, i) => {
+      const row = document.createElement("button");
+      row.className = "srow";
+      const when = clockOf(s);
+      row.innerHTML =
+        `<span class="when">${when || "&mdash;"}</span>` +
+        `<i class="sdot${s.rating ? " r-" + s.rating : ""}"></i>` +
+        `<span class="what">${s.rating ? LABELS[s.rating] : "No rating"}</span>` +
+        `<span class="mins">${s.minutes ? s.minutes + " min" : ""}</span>`;
+      row.setAttribute("aria-label", `Edit session ${i + 1}`);
+      row.addEventListener("click", () => editSession(i));
+      list.appendChild(row);
+    });
+  }
+
+  /* ---------- session length ---------- */
+  // Three common lengths up front; everything else is a tap away under "More".
+  const DUR_MAIN = [10, 15, 30];
+  const DUR_ALL = [5, 10, 15, 20, 25, 30, 45, 60];
+
+  function renderDurs() {
+    const row = document.getElementById("dur-row");
+    row.innerHTML = "";
+    const base = durExpanded ? DUR_ALL : DUR_MAIN;
+    // A length set elsewhere (or by a future timer) may not be in the shown
+    // set; keep it visible rather than silently dropping it.
+    const vals = !selMinutes || base.includes(selMinutes) ? base : [selMinutes, ...base];
+
+    for (const v of vals) row.appendChild(durChip(`${v} min`, v));
+
+    if (durExpanded) {
+      row.appendChild(durInput());
+    } else {
+      const plus = document.createElement("button");
+      plus.className = "dur dur-plus";
+      plus.textContent = "+";
+      plus.setAttribute("aria-label", "More lengths");
+      plus.addEventListener("click", () => {
+        durExpanded = true;
+        renderDurs();
+      });
+      row.appendChild(plus);
+    }
+    markDurSelection();
+  }
+
+  function durChip(label, v) {
+    const b = document.createElement("button");
+    b.className = "dur";
+    b.textContent = label;
+    b.dataset.min = v;
+    // Tapping the chosen length again clears it — no separate "none" chip.
+    b.addEventListener("click", () => setDuration(v === selMinutes ? null : v));
+    return b;
+  }
+
+  // Typing a length lives in the expanded row rather than behind another tap.
+  function durInput() {
+    const input = document.createElement("input");
+    input.type = "number";
+    input.inputMode = "numeric";
+    input.className = "dur-input";
+    input.min = "1";
+    input.max = "600";
+    input.placeholder = "Custom";
+    input.setAttribute("aria-label", "Length in minutes");
+    if (selMinutes && !DUR_ALL.includes(selMinutes)) input.value = selMinutes;
+
+    // "change" fires once, on Enter or on blur — no double-commit to guard.
+    input.addEventListener("change", () => {
+      if (input.value === "") return;
+      const v = Math.round(Number(input.value));
+      if (v >= 1 && v <= 600) setDuration(v);
+      else input.value = selMinutes && !DUR_ALL.includes(selMinutes) ? selMinutes : "";
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        input.blur();
+      } else if (e.key === "Escape") {
+        e.stopPropagation(); // don't let Escape close the whole sheet
+        input.value = "";
+        input.blur();
+      }
+    });
+    return input;
+  }
+
+  // Repaint selection in place. Rebuilding the row here would tear down the
+  // element a tap is landing on — a rating tapped straight after typing a
+  // length would be swallowed.
+  function markDurSelection() {
+    const row = document.getElementById("dur-row");
+    let onChip = false;
+    row.querySelectorAll(".dur").forEach((el) => {
+      const v = el.dataset.min ? Number(el.dataset.min) : null;
+      const on = v !== null && v === selMinutes;
+      el.classList.toggle("selected", on);
+      if (on) onChip = true;
+    });
+    const input = row.querySelector(".dur-input");
+    if (input) {
+      input.classList.toggle("selected", !!selMinutes && !onChip);
+      if (onChip) input.value = "";
+    }
+  }
+
+  function setDuration(v) {
+    selMinutes = v;
+    markDurSelection();
+  }
+
+  function closeSheet() {
+    sheetKey = null;
+    editIndex = null;
+    pendingAt = null;
+    backdrop.classList.remove("open");
+    sheet.classList.remove("open");
+    goalSheet.classList.remove("open");
+    nameSheet.classList.remove("open");
+    timerSheet.classList.remove("open");
+  }
+
+  function markOptSelection() {
+    document.querySelectorAll(".opt").forEach((b) =>
+      b.classList.toggle("selected", b.dataset.rating === selRating)
+    );
+  }
+
+  // Nothing in the sheet commits on its own — the rating and the length are
+  // both just selections until Save, and dismissing throws them away.
+  document.querySelectorAll(".opt").forEach((b) =>
+    b.addEventListener("click", () => {
+      selRating = selRating === b.dataset.rating ? null : b.dataset.rating;
+      markOptSelection();
+    })
+  );
+
+  // Saving with nothing chosen still logs the day: a session counts on its
+  // own, with or without an opinion about how it went.
+  document.getElementById("sheet-save").addEventListener("click", () => {
+    if (!sheetKey || editIndex === null) return;
+    const sessions = sortSessions(sessionsOn(sheetKey));
+    const session = editIndex >= 0
+      ? { ...sessions[editIndex] }
+      : { at: pendingAt || new Date().toISOString() };
+    pendingAt = null;
+    if (selRating) session.rating = selRating;
+    else delete session.rating;
+    if (selMinutes) session.minutes = selMinutes;
+    else delete session.minutes;
+
+    if (editIndex >= 0) sessions[editIndex] = session;
+    else sessions.push(session);
+    // Read the tally on both sides of the save, so the celebration can fire on
+    // the crossing rather than on the state.
+    const before = weekCount();
+    setSessions(sheetKey, sortSessions(sessions));
+    justRated = sheetKey;
+    save();
+    closeSheet();
+    render();
+    const after = weekCount();
+    if (before < goal && after >= goal) setTimeout(() => celebrate(after), 260);
+  });
+
+  document.getElementById("add-session").addEventListener("click", () => editSession(-1));
+
+  removeBtn.addEventListener("click", () => {
+    if (!sheetKey || typeof editIndex !== "number" || editIndex < 0) return;
+    const sessions = sortSessions(sessionsOn(sheetKey));
+    sessions.splice(editIndex, 1);
+    setSessions(sheetKey, sessions);
+    save();
+    // Removing the last one empties the day, so there is nothing to go back to.
+    if (sessions.length) editSession(null);
+    else closeSheet();
+    render();
+  });
+
+  backdrop.addEventListener("click", closeSheet);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeSheet();
+  });
+
+  /* ---------- swipe a sheet down to dismiss ---------- */
+  // Dismissing never saves: whatever was tapped in the sheet has already been
+  // committed, and anything not yet committed is meant to be abandoned.
+  document.querySelectorAll(".sheet").forEach((el) => {
+    let startY = 0;
+    let dy = 0;
+    let dragging = false;
+
+    el.addEventListener("touchstart", (e) => {
+      // Don't hijack a drag that starts on the number field.
+      if (e.target.closest("input")) return;
+      startY = e.touches[0].clientY;
+      dy = 0;
+      dragging = true;
+      el.classList.add("dragging");
+    }, { passive: true });
+
+    el.addEventListener("touchmove", (e) => {
+      if (!dragging) return;
+      dy = Math.max(0, e.touches[0].clientY - startY); // downward only
+      el.style.transform = `translate(-50%, ${dy}px)`;
+    }, { passive: true });
+
+    const end = () => {
+      if (!dragging) return;
+      dragging = false;
+      el.classList.remove("dragging");
+      el.style.transform = "";
+      if (dy > 70) closeSheet();
+    };
+    el.addEventListener("touchend", end);
+    el.addEventListener("touchcancel", end);
+  });
+
+  /* ---------- weekly goal sheet ---------- */
+  const goalSheet = document.getElementById("goal-sheet");
+  const goalNum = document.getElementById("goal-num");
+
+  function setGoal(g) {
+    goal = Math.min(7, Math.max(1, g));
+    goalNum.textContent = goal;
+    saveGoal();
+    recordGoal(goal);
+    // Rebuild rather than just re-stat: the week column carries goals too.
+    render();
+  }
+
+  document.getElementById("week-card").addEventListener("click", () => {
+    goalNum.textContent = goal;
+    backdrop.classList.add("open");
+    goalSheet.classList.add("open");
+  });
+
+  document.getElementById("goal-minus").addEventListener("click", () => setGoal(goal - 1));
+  document.getElementById("goal-plus").addEventListener("click", () => setGoal(goal + 1));
+  document.getElementById("goal-done").addEventListener("click", closeSheet);
+
+  /* ---------- goal celebration ----------
+     Fires on the crossing, never on the state: the week tally is read before
+     a session is saved and again after, and this only runs when it goes from
+     below the goal to at-or-above it. Opening the app on a week already met
+     is not an event, so it stays silent. */
+  const confetti = document.getElementById("confetti");
+  const hooray = document.getElementById("hooray");
+  const cx = confetti.getContext("2d");
+  const WORDS = ["Zero", "One day", "Two days", "Three days", "Four days",
+                 "Five days", "Six days", "Seven days"];
+  const FLAKE = ["#9ec27b", "#e0b544", "#d1675a", "#a3b18a", "#e8e4dc"];
+  let celebrating = false;
+
+  function celebrate(daysThisWeek) {
+    if (celebrating) return;
+    celebrating = true;
+
+    document.getElementById("hooray-sub").textContent =
+      `${WORDS[daysThisWeek] || daysThisWeek} this week`;
+    hooray.hidden = false;
+    hooray.classList.remove("show");
+    void hooray.offsetWidth; // restart the animation if it is still running
+    hooray.classList.add("show");
+
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const w = window.innerWidth, h = window.innerHeight;
+    confetti.width = w * dpr;
+    confetti.height = h * dpr;
+    confetti.style.width = w + "px";
+    confetti.style.height = h + "px";
+    cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    confetti.hidden = false;
+
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const flakes = [];
+    const SPAWN_MS = reduced ? 0 : 1500;
+    const started = performance.now();
+
+    function spawn(n) {
+      for (let i = 0; i < n; i++) {
+        flakes.push({
+          x: Math.random() * w,
+          y: -20 - Math.random() * 60,
+          vy: 1.6 + Math.random() * 2.9,
+          vx: (Math.random() - 0.5) * 1.1,
+          rw: 3 + Math.random() * 4,
+          rh: 5 + Math.random() * 7,
+          rot: Math.random() * Math.PI * 2,
+          vr: (Math.random() - 0.5) * 0.22,
+          sway: Math.random() * Math.PI * 2,
+          c: FLAKE[(Math.random() * FLAKE.length) | 0]
+        });
+      }
+    }
+    spawn(reduced ? 30 : 34);
+
+    let last = started;
+    (function frame(now) {
+      const dt = Math.min(48, now - last) / 16.67;
+      last = now;
+      const age = now - started;
+      if (age < SPAWN_MS && flakes.length < 190) spawn(3);
+
+      cx.clearRect(0, 0, w, h);
+      for (const f of flakes) {
+        f.sway += 0.05 * dt;
+        f.y += f.vy * dt;
+        f.x += (f.vx + Math.sin(f.sway) * 0.5) * dt;
+        f.rot += f.vr * dt;
+        // Fade out over the last second rather than vanishing mid-air.
+        cx.globalAlpha = age > 3200 ? Math.max(0, 1 - (age - 3200) / 900) : 1;
+        cx.save();
+        cx.translate(f.x, f.y);
+        cx.rotate(f.rot);
+        cx.fillStyle = f.c;
+        cx.beginPath();
+        cx.ellipse(0, 0, f.rw / 2, f.rh / 2, 0, 0, Math.PI * 2);
+        cx.fill();
+        cx.restore();
+      }
+      if (age < 4100) requestAnimationFrame(frame);
+      else {
+        cx.clearRect(0, 0, w, h);
+        confetti.hidden = true;
+        hooray.hidden = true;
+        hooray.classList.remove("show");
+        celebrating = false;
+      }
+    })(started);
+  }
+
+  /* ---------- personal greeting ---------- */
+  const nameSheet = document.getElementById("name-sheet");
+  const nameInput = document.getElementById("name-input");
+
+  function renderGreeting() {
+    const h = new Date().getHours();
+    const partOfDay = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+    const el = document.getElementById("greeting");
+    el.textContent = name ? `${partOfDay}, ${name}` : "Zen";
+    el.setAttribute("aria-label", name ? `${partOfDay}, ${name}. Change your name.` : "Set your name");
+  }
+
+  // Onboarding collects the name now, so this sheet is purely for changing it
+  // later, from the greeting.
+  function openNameSheet() {
+    nameInput.value = name;
+    backdrop.classList.add("open");
+    nameSheet.classList.add("open");
+    setTimeout(() => nameInput.focus(), 320);
+  }
+
+  function saveName() {
+    name = nameInput.value.trim().slice(0, 24);
+    localStorage.setItem(NAME_KEY, name);
+    renderGreeting();
+    closeSheet();
+  }
+
+  document.getElementById("greeting").addEventListener("click", openNameSheet);
+  document.getElementById("name-save").addEventListener("click", saveName);
+  nameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") saveName();
+  });
+
+  /* ---------- timer ---------- */
+  const timerSheet = document.getElementById("timer-sheet");
+  const timerView = document.getElementById("timer-view");
+  const timerTime = document.getElementById("timer-time");
+  const ringFg = document.getElementById("ring-fg");
+  const RING = 691.15; // circumference of the r=110 progress ring
+  const MAX_RUN_MS = 6 * 3600 * 1000; // older than this is an abandoned session
+
+  let timer = null;   // { startedAt, targetMin } — targetMin 0 means open-ended
+  let tickId = null;
+  let wakeLock = null;
+  const bell = document.getElementById("bell");
+
+  function fmt(ms) {
+    const total = Math.max(0, Math.round(ms / 1000));
+    return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+  }
+
+  function tick() {
+    if (!timer) return;
+    // Elapsed comes from the clock, never from counting intervals — a phone
+    // that slept or a throttled background tab would lose time otherwise.
+    const elapsed = Date.now() - timer.startedAt;
+    if (timer.targetMin > 0) {
+      const total = timer.targetMin * 60000;
+      const left = Math.max(0, total - elapsed);
+      timerTime.textContent = fmt(left);
+      ringFg.style.strokeDashoffset = RING * (left / total);
+      if (left <= 0) finishTimer(true);
+    } else {
+      timerTime.textContent = fmt(elapsed);
+    }
+  }
+
+  function startTicking() {
+    tick();
+    clearInterval(tickId);
+    tickId = setInterval(tick, 250);
+  }
+
+  function openTimerView(targetMin) {
+    document.getElementById("timer-mode").textContent =
+      targetMin > 0 ? `${targetMin} minute session` : "Stopwatch";
+    ringFg.classList.toggle("hidden", targetMin === 0);
+    ringFg.style.strokeDashoffset = RING;
+    timerView.classList.add("open");
+  }
+
+  function startTimer(targetMin) {
+    timer = { startedAt: Date.now(), targetMin };
+    localStorage.setItem(TIMER_KEY, JSON.stringify(timer));
+    closeSheet();
+    openTimerView(targetMin);
+    primeAudio(); // must happen inside the tap that started the timer
+    requestWakeLock();
+    startTicking();
+  }
+
+  function finishTimer(completed) {
+    if (!timer) return;
+    clearInterval(tickId);
+    tickId = null;
+    const elapsed = Date.now() - timer.startedAt;
+    // A countdown that ran out is worth its target; anything ended early is
+    // worth the time actually meditated, and at least a minute.
+    const minutes = completed && timer.targetMin > 0
+      ? timer.targetMin
+      : Math.max(1, Math.round(elapsed / 60000));
+    pendingAt = new Date(Date.now() - elapsed).toISOString(); // when the session began
+    timer = null;
+    localStorage.removeItem(TIMER_KEY);
+    releaseWakeLock();
+    timerView.classList.remove("open");
+    if (completed) chime();
+    const t = new Date();
+    openSheet(todayKey(), `${MONTHS[t.getMonth()]} ${t.getDate()}, ${t.getFullYear()}`, minutes);
+  }
+
+  function resumeTimer() {
+    let saved;
+    try { saved = JSON.parse(localStorage.getItem(TIMER_KEY)); } catch {}
+    if (!saved || !saved.startedAt) return localStorage.removeItem(TIMER_KEY);
+    const elapsed = Date.now() - saved.startedAt;
+    if (elapsed < 0 || elapsed > MAX_RUN_MS) return localStorage.removeItem(TIMER_KEY);
+    timer = saved;
+    if (saved.targetMin > 0 && elapsed >= saved.targetMin * 60000) {
+      // It ran out while the app was closed — treat it as completed.
+      openTimerView(saved.targetMin);
+      finishTimer(true);
+      return;
+    }
+    openTimerView(saved.targetMin);
+    requestWakeLock();
+    startTicking();
+  }
+
+  async function requestWakeLock() {
+    try {
+      if (navigator.wakeLock) wakeLock = await navigator.wakeLock.request("screen");
+    } catch {}
+  }
+
+  function releaseWakeLock() {
+    try { if (wakeLock) wakeLock.release(); } catch {}
+    wakeLock = null;
+  }
+
+  // iOS only lets a page play audio later if it has played some during a real
+  // tap, so the bell is started and immediately rewound when the timer begins.
+  function primeAudio() {
+    try {
+      // Play unmuted and stop immediately. Priming muted does NOT work: iOS
+      // allows muted playback without a gesture, so it never unlocks audio for
+      // the unprompted play at the end of the countdown. The bell opens with a
+      // 30 ms fade-in, so these few milliseconds are silent anyway.
+      bell.muted = false;
+      bell.volume = 1;
+      const p = bell.play();
+      const settle = () => {
+        bell.pause();
+        bell.currentTime = 0;
+      };
+      if (p && p.then) p.then(settle).catch(settle);
+      else settle();
+    } catch {}
+  }
+
+  function chime() {
+    try {
+      bell.muted = false;
+      bell.volume = 1;
+      bell.currentTime = 0;
+      const p = bell.play();
+      if (p && p.catch) p.catch(() => {});
+    } catch {}
+  }
+
+  document.getElementById("begin-btn").addEventListener("click", () => {
+    backdrop.classList.add("open");
+    timerSheet.classList.add("open");
+  });
+
+  // Logging a session you've already done shouldn't require finding today in the
+  // grid first — that was two steps for the most common thing there is.
+  document.getElementById("log-btn").addEventListener("click", () => {
+    const t = new Date();
+    openSheet(todayKey(), `${MONTHS[t.getMonth()]} ${t.getDate()}, ${t.getFullYear()}`);
+  });
+
+  document.querySelectorAll(".len").forEach((b) =>
+    b.addEventListener("click", () => startTimer(Number(b.dataset.min)))
+  );
+
+  // Stopwatch is the same machinery with no target: it counts up until ended.
+  document.getElementById("stopwatch-btn").addEventListener("click", () => startTimer(0));
+
+
+  document.getElementById("timer-end").addEventListener("click", () => finishTimer(false));
+
+  // Re-acquire the wake lock after the screen has been off, and re-sync the
+  // display, which may be stale if the tab was throttled.
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden || !timer) return;
+    requestWakeLock();
+    tick();
+  });
+
+  renderGreeting();
+  // Keep the greeting honest if the app is left open across morning/evening.
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) renderGreeting();
+  });
+
+  // First run: ask who this is.
+  /* ---------- onboarding ----------
+     Runs once, on a genuinely new install. Existing installs already have a
+     name recorded, so nobody who has been using Zen is shown this. Nothing is
+     written until the last step: a run that is abandoned halfway leaves no
+     half-set name or goal behind, and simply asks again next time. */
+  const onboard = document.getElementById("onboard");
+  const obSteps = Array.from(onboard.querySelectorAll(".ostep"));
+  const obName = document.getElementById("ob-name");
+  const obBack = document.getElementById("ob-back");
+  const obNext = document.getElementById("ob-next");
+  const obSkip = document.getElementById("ob-skip");
+  const obGoalNum = document.getElementById("ob-goal");
+  const NAME_STEP = 1;
+  const LAST_STEP = obSteps.length - 1;
+  let obStep = 0;
+  let obGoal = goal;
+
+  // Build the progress pips from the steps themselves, so adding a screen
+  // never means remembering to add a dot.
+  const obPips = obSteps.map(() => {
+    const pip = document.createElement("i");
+    pip.className = "ob-pip";
+    document.getElementById("ob-bar").appendChild(pip);
+    return pip;
+  });
+
+  function showObStep(i) {
+    obStep = Math.min(LAST_STEP, Math.max(0, i));
+    obSteps.forEach((sec, n) => {
+      sec.classList.toggle("on", n === obStep);
+      sec.setAttribute("aria-hidden", n === obStep ? "false" : "true");
+    });
+    obPips.forEach((pip, n) => pip.classList.toggle("on", n === obStep));
+    obBack.hidden = obStep === 0;
+    obSkip.hidden = obStep === LAST_STEP;
+    obNext.textContent = obStep === LAST_STEP ? "Begin" : "Continue";
+    if (obStep === NAME_STEP) setTimeout(() => obName.focus(), 350);
+  }
+
+  function setObGoal(g) {
+    obGoal = Math.min(7, Math.max(1, g));
+    obGoalNum.textContent = obGoal;
+  }
+
+  function finishOnboarding(keep) {
+    if (keep) {
+      name = obName.value.trim().slice(0, 24);
+      setGoal(obGoal);
+    } else {
+      // Skipping still answers the name question — with "no name, thanks" —
+      // so the app doesn't ask again on the next launch.
+      name = "";
+    }
+    localStorage.setItem(NAME_KEY, name);
+    localStorage.setItem(ONBOARD_KEY, "1");
+    onboard.classList.remove("open");
+    renderGreeting();
+  }
+
+  obNext.addEventListener("click", () => {
+    if (obStep === LAST_STEP) finishOnboarding(true);
+    else showObStep(obStep + 1);
+  });
+  obBack.addEventListener("click", () => showObStep(obStep - 1));
+  obSkip.addEventListener("click", () => finishOnboarding(false));
+  obName.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") showObStep(obStep + 1);
+  });
+  document.getElementById("ob-minus").addEventListener("click", () => setObGoal(obGoal - 1));
+  document.getElementById("ob-plus").addEventListener("click", () => setObGoal(obGoal + 1));
+
+  if (localStorage.getItem(ONBOARD_KEY) === null && localStorage.getItem(NAME_KEY) === null) {
+    setObGoal(goal);
+    showObStep(0);
+    onboard.classList.add("open");
+  }
+
+  resumeTimer();
+
+  document.getElementById("prev").addEventListener("click", () => {
+    view.setMonth(view.getMonth() - 1);
+    render();
+  });
+
+  document.getElementById("next").addEventListener("click", () => {
+    view.setMonth(view.getMonth() + 1);
+    render();
+  });
+
+  render();
+
+  if ("serviceWorker" in navigator) {
+    // Resuming an installed app doesn't always re-navigate, so ask for an
+    // update check whenever it comes back to the foreground.
+    navigator.serviceWorker.register("sw.js").then((reg) => {
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) reg.update();
+      });
+    }).catch(() => {});
+
+    // When a new version takes over, the page on screen is still the old one.
+    // Reload it — but never in the middle of a session, which would drop the wake
+    // lock and the primed audio, so the bell would not ring.
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloading = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!hadController || reloading || timer) return;
+      reloading = true;
+      location.reload();
+    });
+  }
+
+  // Ask the browser not to evict our storage under disk pressure.
+  if (navigator.storage && navigator.storage.persist) {
+    navigator.storage.persist();
+  }
+})();
+</script>
+</body>
+</html>
