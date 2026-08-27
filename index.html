@@ -190,7 +190,7 @@
 
   /* ---------- actions ----------
      Both live at the foot of the page, under the calendar they act on: you
-     look at the month, then decide to sit or to record one you've done. */
+     look at the month, then decide to meditate or to record one you've done. */
   .actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -864,6 +864,161 @@
   }
   .goal-done:hover { background: rgba(163, 177, 138, 0.22); }
 
+  /* ---------- onboarding ----------
+     A full screen rather than a sheet: first run is the one moment there is
+     nothing behind to look at, and a sheet over an empty calendar reads as an
+     interruption rather than a welcome.
+
+     It asks only what the app cannot work out for itself — a name and a goal.
+     How to log a session is not explained here; the calendar shows that in
+     place, on the day it is needed. See .coach below. */
+  .onboard {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: none;
+    flex-direction: column;
+    background: var(--bg);
+    background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(163, 177, 138, 0.09), transparent);
+    padding: calc(28px + env(safe-area-inset-top)) 22px calc(20px + env(safe-area-inset-bottom));
+  }
+  .onboard.open { display: flex; }
+
+  .ob-bar {
+    display: flex;
+    justify-content: center;
+    gap: 7px;
+  }
+
+  .ob-pip {
+    width: 5px;
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(232, 228, 220, 0.16);
+    transition: background 0.35s, width 0.35s;
+  }
+  .ob-pip.on { width: 16px; background: var(--accent); }
+
+  .ob-stage {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  .ostep { display: none; width: 100%; text-align: center; }
+  .ostep.on {
+    display: block;
+    animation: obIn 0.45s cubic-bezier(0.32, 0.72, 0.35, 1);
+  }
+
+  @keyframes obIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .ob-kicker {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .ob-title {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 30px;
+    font-weight: 500;
+    line-height: 1.2;
+    margin: 6px 0 16px;
+  }
+
+  .ob-lede {
+    color: var(--text-dim);
+    font-size: 13.5px;
+    line-height: 1.65;
+  }
+
+  /* The unit the stepper counts. The goal screen asks its question in words
+     and answers it with a number, so the number has to say what it is. */
+  .goal-unit {
+    margin-top: 10px;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .ob-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  .ob-back {
+    flex: none;
+    padding: 13px 14px;
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .ob-back:hover { color: var(--text-dim); }
+  .ob-back[hidden] { display: none; }
+
+  .ob-next { flex: 1; margin-top: 0; }
+
+  .ob-skip {
+    width: 100%;
+    max-width: 400px;
+    margin: 2px auto 0;
+  }
+  .ob-skip[hidden] { display: none; }
+
+  /* ---------- first-log coach ----------
+     Onboarding never says how to log a session, so the calendar says it once,
+     on an empty log, and stops the moment there is anything to show. No stored
+     flag: "nothing logged yet" is the condition, and it is already in the data. */
+  .coach {
+    margin: 14px 0 0;
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--text-faint);
+    animation: coachIn 0.6s ease both;
+  }
+  .coach[hidden] { display: none; }
+
+  @keyframes coachIn { from { opacity: 0; } to { opacity: 1; } }
+
+  /* A ring that breathes out of today, drawn behind the number rather than on
+     the .day itself, so it never fights the ring a logged day wears. */
+  .day.today.hint::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    animation: hintPulse 2.6s ease-in-out infinite;
+  }
+
+  @keyframes hintPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(163, 177, 138, 0.30); }
+    50%      { box-shadow: 0 0 0 7px rgba(163, 177, 138, 0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .day.today.hint::before { animation: none; box-shadow: 0 0 0 3px rgba(163, 177, 138, 0.22); }
+    .ostep.on, .coach { animation: none; }
+  }
+
   /* ---------- name sheet ---------- */
   .name-input {
     width: 100%;
@@ -915,6 +1070,7 @@
         <button class="nav-btn" id="next" aria-label="Next month">&#8250;</button>
       </div>
       <div class="grid" id="grid"></div>
+      <p class="coach" id="coach" hidden>Tap today to log your first session.</p>
     </section>
 
     <section class="actions" aria-label="Actions">
@@ -974,7 +1130,7 @@
     <p class="mode-label">Stopwatch &mdash; count up</p>
     <button class="stopwatch" id="stopwatch-btn">
       <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 1h6"/></svg>
-      Sit for as long as you like
+      Practice for as long as you like
     </button>
   </div>
 
@@ -999,12 +1155,52 @@
 
   <div class="sheet" id="name-sheet" role="dialog" aria-modal="true" aria-labelledby="name-title">
     <div class="sheet-handle" aria-hidden="true"></div>
-    <p class="sheet-date" id="name-kicker">Welcome</p>
+    <p class="sheet-date">Your name</p>
     <h2 class="sheet-title" id="name-title">What should we call you?</h2>
     <input class="name-input" id="name-input" type="text" maxlength="24"
            placeholder="Your name" autocomplete="given-name" enterkeyhint="done" />
-    <button class="goal-done" id="name-save">Begin</button>
-    <button class="sheet-remove" id="name-skip">Skip</button>
+    <button class="goal-done" id="name-save">Save</button>
+  </div>
+
+  <div class="onboard" id="onboard" role="dialog" aria-modal="true" aria-label="Welcome to Zen">
+    <div class="ob-bar" id="ob-bar" aria-hidden="true"></div>
+
+    <div class="ob-stage">
+      <section class="ostep" aria-label="Welcome">
+        <div class="breath" aria-hidden="true"></div>
+        <h1 class="ob-title">Welcome to Zen</h1>
+        <p class="ob-lede">
+          A habit tracker for your meditation practice.
+          Set a goal, log each session, and let the weeks
+          add up, one breath at a time.
+        </p>
+      </section>
+
+      <section class="ostep" aria-label="Your name">
+        <p class="ob-kicker">Hello</p>
+        <h2 class="ob-title">What should we call you?</h2>
+        <input class="name-input" id="ob-name" type="text" maxlength="24"
+               placeholder="Your name" autocomplete="given-name"
+               autocapitalize="words" enterkeyhint="next" />
+      </section>
+
+      <section class="ostep" aria-label="Weekly goal">
+        <p class="ob-kicker">Weekly goal</p>
+        <h2 class="ob-title">How often do you want to practice?</h2>
+        <div class="stepper">
+          <button class="step-btn" id="ob-minus" aria-label="Decrease goal">&minus;</button>
+          <span class="goal-num" id="ob-goal">5</span>
+          <button class="step-btn" id="ob-plus" aria-label="Increase goal">+</button>
+        </div>
+        <p class="goal-unit">Days a week</p>
+      </section>
+    </div>
+
+    <div class="ob-actions">
+      <button class="ob-back" id="ob-back" hidden>Back</button>
+      <button class="goal-done ob-next" id="ob-next">Continue</button>
+    </div>
+    <button class="sheet-remove ob-skip" id="ob-skip">Skip</button>
   </div>
 
 <script>
@@ -1014,6 +1210,7 @@
   const GOAL_KEY = "zen-weekly-goal";
   const GOALS_KEY = "zen-goal-history";
   const NAME_KEY = "zen-name";
+  const ONBOARD_KEY = "zen-onboarded";
   const TIMER_KEY = "zen-timer";
   const MONTHS = ["January","February","March","April","May","June",
                   "July","August","September","October","November","December"];
@@ -1021,6 +1218,7 @@
   const LABELS = { good: "good", okay: "okay", rough: "not great" };
 
   const grid = document.getElementById("grid");
+  const coach = document.getElementById("coach");
   const title = document.getElementById("cal-title");
 
   // log maps ISO date -> rating: "good" | "okay" | "rough"
@@ -1034,7 +1232,7 @@
   let selMinutes = null; // length chosen in the sheet, null = not recorded
   let selRating = null;  // rating chosen in the sheet, null = none
   let editIndex = null;  // null = the day's list, -1 = new, 0.. = that session
-  let pendingAt = null;  // when a timed sit began, so it logs its start time
+  let pendingAt = null;  // when a timed session began, so it logs its start time
   let durExpanded = false; // "More" tapped: show the full set of lengths
   let justRated = null;  // date to pop-animate on next render
 
@@ -1282,6 +1480,18 @@
     justRated = null;
 
     updateStats(y, m);
+    renderCoach();
+  }
+
+  // Shown only while nothing has ever been logged, and only on the month that
+  // actually contains today — the hint points at a day, so it has to be a day
+  // you can see. Reading the log directly means the hint disappears the instant
+  // a session is saved, and comes back if every session is later removed.
+  function renderCoach() {
+    const today = grid.querySelector(".day.today");
+    const show = Object.keys(log).length === 0 && !!today;
+    coach.hidden = !show;
+    if (today) today.classList.toggle("hint", show);
   }
 
   // Sessions logged in the Sunday–Saturday week containing the given day.
@@ -1671,7 +1881,6 @@
   /* ---------- personal greeting ---------- */
   const nameSheet = document.getElementById("name-sheet");
   const nameInput = document.getElementById("name-input");
-  const nameSkip = document.getElementById("name-skip");
 
   function renderGreeting() {
     const h = new Date().getHours();
@@ -1681,10 +1890,9 @@
     el.setAttribute("aria-label", name ? `${partOfDay}, ${name}. Change your name.` : "Set your name");
   }
 
-  function openNameSheet(firstRun) {
-    document.getElementById("name-kicker").textContent = firstRun ? "Welcome" : "Your name";
-    document.getElementById("name-save").textContent = firstRun ? "Begin" : "Save";
-    nameSkip.style.display = firstRun ? "block" : "none";
+  // Onboarding collects the name now, so this sheet is purely for changing it
+  // later, from the greeting.
+  function openNameSheet() {
     nameInput.value = name;
     backdrop.classList.add("open");
     nameSheet.classList.add("open");
@@ -1698,12 +1906,8 @@
     closeSheet();
   }
 
-  document.getElementById("greeting").addEventListener("click", () => openNameSheet(false));
+  document.getElementById("greeting").addEventListener("click", openNameSheet);
   document.getElementById("name-save").addEventListener("click", saveName);
-  nameSkip.addEventListener("click", () => {
-    localStorage.setItem(NAME_KEY, "");
-    closeSheet();
-  });
   nameInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") saveName();
   });
@@ -1750,7 +1954,7 @@
 
   function openTimerView(targetMin) {
     document.getElementById("timer-mode").textContent =
-      targetMin > 0 ? `${targetMin} minute sit` : "Stopwatch";
+      targetMin > 0 ? `${targetMin} minute session` : "Stopwatch";
     ringFg.classList.toggle("hidden", targetMin === 0);
     ringFg.style.strokeDashoffset = RING;
     timerView.classList.add("open");
@@ -1772,11 +1976,11 @@
     tickId = null;
     const elapsed = Date.now() - timer.startedAt;
     // A countdown that ran out is worth its target; anything ended early is
-    // worth the time actually sat, and at least a minute.
+    // worth the time actually meditated, and at least a minute.
     const minutes = completed && timer.targetMin > 0
       ? timer.targetMin
       : Math.max(1, Math.round(elapsed / 60000));
-    pendingAt = new Date(Date.now() - elapsed).toISOString(); // when the sit began
+    pendingAt = new Date(Date.now() - elapsed).toISOString(); // when the session began
     timer = null;
     localStorage.removeItem(TIMER_KEY);
     releaseWakeLock();
@@ -1850,7 +2054,7 @@
     timerSheet.classList.add("open");
   });
 
-  // Logging a sit you've already done shouldn't require finding today in the
+  // Logging a session you've already done shouldn't require finding today in the
   // grid first — that was two steps for the most common thing there is.
   document.getElementById("log-btn").addEventListener("click", () => {
     const t = new Date();
@@ -1882,7 +2086,82 @@
   });
 
   // First run: ask who this is.
-  if (localStorage.getItem(NAME_KEY) === null) openNameSheet(true);
+  /* ---------- onboarding ----------
+     Runs once, on a genuinely new install. Existing installs already have a
+     name recorded, so nobody who has been using Zen is shown this. Nothing is
+     written until the last step: a run that is abandoned halfway leaves no
+     half-set name or goal behind, and simply asks again next time. */
+  const onboard = document.getElementById("onboard");
+  const obSteps = Array.from(onboard.querySelectorAll(".ostep"));
+  const obName = document.getElementById("ob-name");
+  const obBack = document.getElementById("ob-back");
+  const obNext = document.getElementById("ob-next");
+  const obSkip = document.getElementById("ob-skip");
+  const obGoalNum = document.getElementById("ob-goal");
+  const NAME_STEP = 1;
+  const LAST_STEP = obSteps.length - 1;
+  let obStep = 0;
+  let obGoal = goal;
+
+  // Build the progress pips from the steps themselves, so adding a screen
+  // never means remembering to add a dot.
+  const obPips = obSteps.map(() => {
+    const pip = document.createElement("i");
+    pip.className = "ob-pip";
+    document.getElementById("ob-bar").appendChild(pip);
+    return pip;
+  });
+
+  function showObStep(i) {
+    obStep = Math.min(LAST_STEP, Math.max(0, i));
+    obSteps.forEach((sec, n) => {
+      sec.classList.toggle("on", n === obStep);
+      sec.setAttribute("aria-hidden", n === obStep ? "false" : "true");
+    });
+    obPips.forEach((pip, n) => pip.classList.toggle("on", n === obStep));
+    obBack.hidden = obStep === 0;
+    obSkip.hidden = obStep === LAST_STEP;
+    obNext.textContent = obStep === LAST_STEP ? "Begin" : "Continue";
+    if (obStep === NAME_STEP) setTimeout(() => obName.focus(), 350);
+  }
+
+  function setObGoal(g) {
+    obGoal = Math.min(7, Math.max(1, g));
+    obGoalNum.textContent = obGoal;
+  }
+
+  function finishOnboarding(keep) {
+    if (keep) {
+      name = obName.value.trim().slice(0, 24);
+      setGoal(obGoal);
+    } else {
+      // Skipping still answers the name question — with "no name, thanks" —
+      // so the app doesn't ask again on the next launch.
+      name = "";
+    }
+    localStorage.setItem(NAME_KEY, name);
+    localStorage.setItem(ONBOARD_KEY, "1");
+    onboard.classList.remove("open");
+    renderGreeting();
+  }
+
+  obNext.addEventListener("click", () => {
+    if (obStep === LAST_STEP) finishOnboarding(true);
+    else showObStep(obStep + 1);
+  });
+  obBack.addEventListener("click", () => showObStep(obStep - 1));
+  obSkip.addEventListener("click", () => finishOnboarding(false));
+  obName.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") showObStep(obStep + 1);
+  });
+  document.getElementById("ob-minus").addEventListener("click", () => setObGoal(obGoal - 1));
+  document.getElementById("ob-plus").addEventListener("click", () => setObGoal(obGoal + 1));
+
+  if (localStorage.getItem(ONBOARD_KEY) === null && localStorage.getItem(NAME_KEY) === null) {
+    setObGoal(goal);
+    showObStep(0);
+    onboard.classList.add("open");
+  }
 
   resumeTimer();
 
@@ -1908,7 +2187,7 @@
     }).catch(() => {});
 
     // When a new version takes over, the page on screen is still the old one.
-    // Reload it — but never in the middle of a sit, which would drop the wake
+    // Reload it — but never in the middle of a session, which would drop the wake
     // lock and the primed audio, so the bell would not ring.
     const hadController = !!navigator.serviceWorker.controller;
     let reloading = false;
