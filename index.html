@@ -1019,6 +1019,104 @@
     .ostep.on, .coach { animation: none; }
   }
 
+  /* ---------- goal celebration ---------- */
+  /* The page dims right down for the few seconds this is on screen, so the
+     message is the only thing to read. The tally flipping to met is waiting
+     underneath the moment the scrim lifts. */
+  .cel-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 39;
+    background: rgba(10, 12, 14, 0.93);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    pointer-events: none;
+    opacity: 0;
+  }
+  .cel-scrim[hidden] { display: none; }
+  .cel-scrim.show { animation: scrimIn 4s ease both; }
+
+  @keyframes scrimIn {
+    0%   { opacity: 0; }
+    9%   { opacity: 1; }
+    80%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  .confetti {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    pointer-events: none;
+  }
+  .confetti[hidden] { display: none; }
+
+  /* Centred on the dimmed page. The tally it celebrates is waiting underneath
+     in the stats, so the scrim lifting is what reveals 5/5 rather than this
+     competing with it. */
+  .hooray {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    z-index: 41;
+    transform: translate(-50%, -50%);
+    width: calc(100% - 44px);
+    max-width: 340px;
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+  }
+  .hooray[hidden] { display: none; }
+  .hooray.show { animation: hoorayIn 4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+  @keyframes hoorayIn {
+    0%   { opacity: 0; transform: translate(-50%, calc(-50% + 14px)) scale(0.94); }
+    14%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    80%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, calc(-50% - 10px)) scale(1); }
+  }
+
+  .hooray h2 {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 32px;
+    font-weight: 500;
+    line-height: 1.08;
+  }
+
+  /* The same shape as the week tile — Cormorant, tabular figures, the goal
+     smaller and dimmer than the count — just scaled up to carry the moment.
+     It is the number people already read as "am I there yet"; seeing it
+     resolve to 5/5 is the success, so it leads. */
+  .hooray-score {
+    margin-top: 14px;
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 76px;
+    font-weight: 500;
+    line-height: 1.02;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 42px rgba(163, 177, 138, 0.4);
+  }
+  .hooray-score i,
+  .hooray-score em {
+    font-style: normal;
+    font-size: 48px;
+    margin-left: 2px;
+  }
+  .hooray-score i { color: var(--text-faint); }
+  .hooray-score em { color: var(--text-dim); }
+
+  .hooray-say {
+    margin-top: 12px;
+    font-size: 13.5px;
+    letter-spacing: 0.04em;
+    color: var(--text-dim);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hooray.show, .cel-scrim.show { animation-duration: 4s; }
+  }
+
   /* ---------- name sheet ---------- */
   .name-input {
     width: 100%;
@@ -1084,6 +1182,16 @@
       </button>
     </section>
   </main>
+
+  <div class="cel-scrim" id="cel-scrim" hidden aria-hidden="true"></div>
+  <canvas class="confetti" id="confetti" hidden aria-hidden="true"></canvas>
+  <div class="hooray" id="hooray" hidden role="status">
+    <h2>Congrats!</h2>
+    <p class="hooray-score" id="hooray-score">
+      <span id="hooray-count">5</span><i>/</i><em id="hooray-goal">5</em>
+    </p>
+    <p class="hooray-say">You met your weekly goal</p>
+  </div>
 
   <div class="backdrop" id="backdrop"></div>
   <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
@@ -1795,11 +1903,16 @@
 
     if (editIndex >= 0) sessions[editIndex] = session;
     else sessions.push(session);
+    // Read the tally on both sides of the save, so the celebration can fire on
+    // the crossing rather than on the state.
+    const before = weekCount();
     setSessions(sheetKey, sortSessions(sessions));
     justRated = sheetKey;
     save();
     closeSheet();
     render();
+    const after = weekCount();
+    if (before < goal && after >= goal) setTimeout(() => celebrate(after), 260);
   });
 
   document.getElementById("add-session").addEventListener("click", () => editSession(-1));
@@ -1877,6 +1990,104 @@
   document.getElementById("goal-minus").addEventListener("click", () => setGoal(goal - 1));
   document.getElementById("goal-plus").addEventListener("click", () => setGoal(goal + 1));
   document.getElementById("goal-done").addEventListener("click", closeSheet);
+
+  /* ---------- goal celebration ----------
+     Fires on the crossing, never on the state: the week tally is read before
+     a session is saved and again after, and this only runs when it goes from
+     below the goal to at-or-above it. Opening the app on a week already met
+     is not an event, so it stays silent. */
+  const confetti = document.getElementById("confetti");
+  const hooray = document.getElementById("hooray");
+  const scrim = document.getElementById("cel-scrim");
+  const cx = confetti.getContext("2d");
+  const FLAKE = ["#9ec27b", "#e0b544", "#d1675a", "#a3b18a", "#e8e4dc"];
+  let celebrating = false;
+
+  function celebrate(daysThisWeek) {
+    if (celebrating) return;
+    celebrating = true;
+
+    document.getElementById("hooray-count").textContent = daysThisWeek;
+    document.getElementById("hooray-goal").textContent = goal;
+    // The figures are decorative markup; give the live region a plain sentence.
+    document.getElementById("hooray-score").setAttribute(
+      "aria-label", `${daysThisWeek} of ${goal} days this week`);
+    scrim.hidden = false;
+    hooray.hidden = false;
+    scrim.classList.remove("show");
+    hooray.classList.remove("show");
+    void hooray.offsetWidth; // restart the animations if they are still running
+    scrim.classList.add("show");
+    hooray.classList.add("show");
+
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const w = window.innerWidth, h = window.innerHeight;
+    confetti.width = w * dpr;
+    confetti.height = h * dpr;
+    confetti.style.width = w + "px";
+    confetti.style.height = h + "px";
+    cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    confetti.hidden = false;
+
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const flakes = [];
+    const SPAWN_MS = reduced ? 0 : 1500;
+    const started = performance.now();
+
+    function spawn(n) {
+      for (let i = 0; i < n; i++) {
+        flakes.push({
+          x: Math.random() * w,
+          y: -20 - Math.random() * 60,
+          vy: 1.6 + Math.random() * 2.9,
+          vx: (Math.random() - 0.5) * 1.1,
+          rw: 3 + Math.random() * 4,
+          rh: 5 + Math.random() * 7,
+          rot: Math.random() * Math.PI * 2,
+          vr: (Math.random() - 0.5) * 0.22,
+          sway: Math.random() * Math.PI * 2,
+          c: FLAKE[(Math.random() * FLAKE.length) | 0]
+        });
+      }
+    }
+    spawn(reduced ? 30 : 34);
+
+    let last = started;
+    (function frame(now) {
+      const dt = Math.min(48, now - last) / 16.67;
+      last = now;
+      const age = now - started;
+      if (age < SPAWN_MS && flakes.length < 190) spawn(3);
+
+      cx.clearRect(0, 0, w, h);
+      for (const f of flakes) {
+        f.sway += 0.05 * dt;
+        f.y += f.vy * dt;
+        f.x += (f.vx + Math.sin(f.sway) * 0.5) * dt;
+        f.rot += f.vr * dt;
+        // Fade out over the last second rather than vanishing mid-air.
+        cx.globalAlpha = age > 3200 ? Math.max(0, 1 - (age - 3200) / 900) : 1;
+        cx.save();
+        cx.translate(f.x, f.y);
+        cx.rotate(f.rot);
+        cx.fillStyle = f.c;
+        cx.beginPath();
+        cx.ellipse(0, 0, f.rw / 2, f.rh / 2, 0, 0, Math.PI * 2);
+        cx.fill();
+        cx.restore();
+      }
+      if (age < 4100) requestAnimationFrame(frame);
+      else {
+        cx.clearRect(0, 0, w, h);
+        confetti.hidden = true;
+        hooray.hidden = true;
+        scrim.hidden = true;
+        hooray.classList.remove("show");
+        scrim.classList.remove("show");
+        celebrating = false;
+      }
+    })(started);
+  }
 
   /* ---------- personal greeting ---------- */
   const nameSheet = document.getElementById("name-sheet");
