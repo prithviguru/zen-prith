@@ -18,6 +18,11 @@ https://prithviguru.github.io/zen-prith/.
 - **One person per install** — family members share the same URL, so any
   personalization (name, goal) is per-browser and prompted on first run.
   Never hard-code personal details into the app.
+- **Call them sessions, never "sits."** In anything a person reads — UI copy,
+  README, the onboarding screens — a meditation is a *session*. "Sit" as a
+  noun or verb for meditating is out. (`sit` meaning *position* is fine, as in
+  "the numbers sit straight on the page.")
+
 - **A rounded surface means "you can press this."** Cards and filled shapes
   are reserved for controls and the calendar; plain data sits straight on the
   page, divided by hairlines. When everything wore the same rounded card, a
