@@ -1020,6 +1020,29 @@
   }
 
   /* ---------- goal celebration ---------- */
+  /* The page dims right down for the few seconds this is on screen, so the
+     message is the only thing to read. The tally flipping to met is waiting
+     underneath the moment the scrim lifts. */
+  .cel-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 39;
+    background: rgba(10, 12, 14, 0.93);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    pointer-events: none;
+    opacity: 0;
+  }
+  .cel-scrim[hidden] { display: none; }
+  .cel-scrim.show { animation: scrimIn 4s ease both; }
+
+  @keyframes scrimIn {
+    0%   { opacity: 0; }
+    9%   { opacity: 1; }
+    80%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
   .confetti {
     position: fixed;
     inset: 0;
@@ -1033,7 +1056,7 @@
   .hooray {
     position: fixed;
     left: 50%;
-    top: 40%;
+    top: 50%;
     z-index: 41;
     transform: translate(-50%, -50%);
     width: calc(100% - 44px);
@@ -1043,12 +1066,12 @@
     opacity: 0;
   }
   .hooray[hidden] { display: none; }
-  .hooray.show { animation: hoorayIn 3.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .hooray.show { animation: hoorayIn 4s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
   @keyframes hoorayIn {
     0%   { opacity: 0; transform: translate(-50%, calc(-50% + 14px)) scale(0.94); }
-    12%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-    82%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    14%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    80%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
     100% { opacity: 0; transform: translate(-50%, calc(-50% - 10px)) scale(1); }
   }
 
@@ -1057,7 +1080,6 @@
     font-size: 38px;
     font-weight: 500;
     line-height: 1.08;
-    text-shadow: 0 0 34px rgba(14, 17, 19, 0.95), 0 0 12px rgba(14, 17, 19, 1);
   }
   .hooray h2 em { font-style: italic; color: var(--accent); }
   .hooray p {
@@ -1065,11 +1087,10 @@
     font-size: 13px;
     letter-spacing: 0.04em;
     color: var(--text-dim);
-    text-shadow: 0 0 22px rgba(14, 17, 19, 0.95), 0 0 10px rgba(14, 17, 19, 1);
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .hooray.show { animation-duration: 3.4s; }
+    .hooray.show, .cel-scrim.show { animation-duration: 4s; }
   }
 
   /* ---------- name sheet ---------- */
@@ -1138,6 +1159,7 @@
     </section>
   </main>
 
+  <div class="cel-scrim" id="cel-scrim" hidden aria-hidden="true"></div>
   <canvas class="confetti" id="confetti" hidden aria-hidden="true"></canvas>
   <div class="hooray" id="hooray" hidden role="status">
     <h2>Congrats!<br /><em>You met your weekly goal</em></h2>
@@ -1949,6 +1971,7 @@
      is not an event, so it stays silent. */
   const confetti = document.getElementById("confetti");
   const hooray = document.getElementById("hooray");
+  const scrim = document.getElementById("cel-scrim");
   const cx = confetti.getContext("2d");
   const WORDS = ["Zero", "One day", "Two days", "Three days", "Four days",
                  "Five days", "Six days", "Seven days"];
@@ -1961,9 +1984,12 @@
 
     document.getElementById("hooray-sub").textContent =
       `${WORDS[daysThisWeek] || daysThisWeek} this week`;
+    scrim.hidden = false;
     hooray.hidden = false;
+    scrim.classList.remove("show");
     hooray.classList.remove("show");
-    void hooray.offsetWidth; // restart the animation if it is still running
+    void hooray.offsetWidth; // restart the animations if they are still running
+    scrim.classList.add("show");
     hooray.classList.add("show");
 
     const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -2027,7 +2053,9 @@
         cx.clearRect(0, 0, w, h);
         confetti.hidden = true;
         hooray.hidden = true;
+        scrim.hidden = true;
         hooray.classList.remove("show");
+        scrim.classList.remove("show");
         celebrating = false;
       }
     })(started);
